@@ -6,5 +6,5 @@
 </script>
 
 <div id="map-root">
-	{@render children()}
+{@render children()}
 </div>

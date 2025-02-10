@@ -1,5 +1,5 @@
-import { dev } from '$app/environment';
+// import { dev } from '$app/environment';
 
-export const csr = dev;
-export const ssr = false;
-export const prerender = true;
+// export const csr = dev;
+// export const ssr = false;
+// export const prerender = true;

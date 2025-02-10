@@ -548,13 +548,13 @@
 <svelte:window bind:innerWidth bind:innerHeight />
 <main class="absolute inset-0 overflow-hidden font-['Basis_Grotesque']">
   <div id="map-container" class="absolute inset-0">
-    <div id="map-root"></div>
+  <div id="map-root"></div>
     <div class="absolute right-[calc(3%+48px)] top-4">
       <Legend />
     </div>
   </div>
-  <div class="absolute left-4 top-4 w-[400px] max-h-[calc(100vh-2rem)] flex flex-col space-y-4 floating-panel z-10 p-4 overflow-hidden">
-    <SearchPanel onSearch={searchProjects} />
-    <ResultsTable />
-  </div>
+    <div class="absolute left-4 top-4 w-[400px] max-h-[calc(100vh-2rem)] flex flex-col space-y-4 floating-panel z-10 p-4 overflow-hidden">
+      <SearchPanel onSearch={searchProjects} />
+      <ResultsTable />
+    </div>
 </main>
