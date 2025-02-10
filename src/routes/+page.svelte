@@ -548,7 +548,7 @@
 <svelte:window bind:innerWidth bind:innerHeight />
 <main class="absolute inset-0 overflow-hidden font-['Basis_Grotesque']">
   <div id="map-container" class="absolute inset-0">
-    <div id="map-root" />
+    <div id="map-root"></div>
     <div class="absolute right-[calc(3%+48px)] top-4">
       <Legend />
     </div>

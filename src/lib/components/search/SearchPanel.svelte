@@ -260,14 +260,6 @@
     top: -0.12em;
   }
 
-  .search-width {
-    width: calc(94% - 7.5rem);
-  }
-
-  .search-left {
-    left: calc(3% + 2.5rem);
-  }
-
   .suggestions {
     @apply absolute left-0 mt-1 bg-white rounded-md shadow-lg border border-slate-200 max-h-[300px] overflow-y-auto z-50;
     width: 200%;
@@ -331,6 +323,8 @@
             {#each suggestions as suggestion}
               <div 
                 class="suggestion"
+                role="button"
+                tabindex="0"
                 on:mousedown={() => onSuggestionClick(suggestion)}
               >
                 <div class="suggestion-main">{suggestion.text}</div>
