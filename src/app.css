@@ -1,3 +1,215 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.maplibregl-map {
+  font-family: 'Basis Grotesque', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.maplibregl-ctrl-top-left {
+  left: 3%;
+  top: 1rem;
+}
+
+.maplibregl-ctrl-group {
+  margin: 0;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+#map-container {
+  height: 100%;
+  width: 100%;
+}
+
+.maplibregl-map {
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .absolute.left-4.top-4 {
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: 50vh;
+    border-radius: 0;
+  }
+}
+
+.floating-panel {
+  @apply rounded-lg border border-solid border-earth bg-[#f0f0f0] shadow-md;
+}
+
+.search-input {
+  @apply rounded border-earth bg-[#f0f0f0] focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.search-button {
+  @apply bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.maplibregl-canvas {
+  outline: none;
+}
+
+.reset-view-btn {
+  width: 29px;
+  height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+@layer base {
+	@font-face {
+		font-display: auto;
+		font-family: 'PolySans';
+		font-style: normal;
+		font-weight: 500;
+		src:
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/PolySansUS-Median..woff2)
+				format('woff2'),
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/PolySansUS-Median..woff)
+				format('woff');
+	}
+
+	@font-face {
+		font-display: auto;
+		font-family: 'Basis Grotesque';
+		font-style: normal;
+		font-weight: 400;
+		src:
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/basis-grotesque-regular-pro..woff2)
+				format('woff2'),
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/basis-grotesque-regular-pro..woff)
+				format('woff');
+	}
+
+	@font-face {
+		font-display: auto;
+		font-family: 'Basis Grotesque';
+		font-style: normal;
+		font-weight: 700;
+		src:
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/basis-grotesque-bold-pro..woff2)
+				format('woff2'),
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/basis-grotesque-bold-pro..woff)
+				format('woff');
+	}
+
+	@font-face {
+		font-display: auto;
+		font-family: 'Basis Grotesque';
+		font-style: italic;
+		font-weight: 700;
+		src:
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/basis-grotesque-bold-italic-pro..woff2)
+				format('woff2'),
+			url(https://grist.org/wp-content/themes/grist/dist/fonts/basis-grotesque-bold-italic-pro..woff)
+				format('woff');
+	}
+}
+
+@layer utilities {
+	.stack {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+	}
+
+	.stack > * {
+		margin-block: 0;
+	}
+
+	.stack-2xs > * + * {
+		margin-block-start: 0.25rem;
+	}
+
+	.stack-xs > * + * {
+		margin-block-start: 0.5rem;
+	}
+
+	.stack-sm > * + * {
+		margin-block-start: 1rem;
+	}
+
+	.stack-md > * + * {
+		margin-block-start: 1.5rem;
+	}
+
+	.stack-lg > * + * {
+		margin-block-start: 2rem;
+	}
+
+	.stack-none > * + * {
+		margin-block-start: 0;
+	}
+
+	.stack-h {
+		display: flex;
+		flex-direction: row;
+		justify-content: flex-start;
+	}
+
+	.stack-h > * {
+		margin-inline: 0;
+	}
+
+	.stack--h-2xs > * + * {
+		margin-inline-start: 0.25rem;
+	}
+
+	.stack-h-xs > * + * {
+		margin-inline-start: 0.5rem;
+	}
+
+	.stack-h-sm > * + * {
+		margin-inline-start: 1rem;
+	}
+
+	.stack-h-md > * + * {
+		margin-inline-start: 1.5rem;
+	}
+
+	.stack-h-lg > * + * {
+		margin-inline-start: 2rem;
+	}
+
+	.stack-h-none > * + * {
+		margin-inline-start: 0;
+	}
+}
+
+#map-root .maplibregl-ctrl.maplibregl-ctrl-group {
+	@apply m-0 mb-2 rounded border border-solid border-earth bg-smog/75 shadow backdrop-blur;
+}
+
+#map-root .maplibregl-ctrl-geolocate,
+#map-root .maplibregl-ctrl-zoom-in,
+#map-root .maplibregl-ctrl-zoom-out,
+#map-root .maplibregl-ctrl-compass {
+	@apply h-8 w-8;
+}
+
+#map-root .maplibregl-ctrl-top-right {
+	@apply right-[3%] top-4 flex flex-col items-end;
+}
+
+#map-root .maplibregl-popup-tip {
+	display: none;
+}
+
+#map-root .maplibregl-popup-content {
+	@apply rounded border border-solid border-earth !bg-smog bg-smog/75 p-2 shadow-md backdrop-blur;
+}
+
+div.observer-pixel-14 {
+	display: none;
+}
