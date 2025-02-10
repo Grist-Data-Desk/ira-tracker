@@ -17,7 +17,10 @@ const config = {
 			fallback: undefined,
 			precompress: false,
 			strict: true
-		})
+		}),
+		paths: {
+			assets: 'https://grist.nyc3.cdn.digitaloceanspaces.com/ira-bil/interactives/ira-bil-map'
+		}
 	}
 };
 
