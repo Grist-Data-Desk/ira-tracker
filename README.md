@@ -4,11 +4,11 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 
 ## Features
 
-- 🗺️ Interactive map visualization of IRA projects
-- 🔍 ZIP code-based search with customizable radius
-- 📊 Project details and data visualization
+- 🗺️ Interactive map visualization of IRA/BIL projects
+- 🔍 Location-based search with customizable radius
+- 📊 Project details with multi-project popup support
 - 📱 Responsive design for both desktop and mobile
-- 🎨 Multiple color modes for data visualization
+- 🎨 Multiple visualization modes (funding source, agency, category)
 - 💨 Fast vector tile rendering using PMTiles
 
 ## Prerequisites
@@ -38,21 +38,28 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 
 ## Available Scripts
 
+### Development
 - `pnpm dev` - Start development server
 - `pnpm build` - Build for production
 - `pnpm preview` - Preview production build
+
+### Code Quality
 - `pnpm check` - Run TypeScript checks
+- `pnpm check:watch` - Run TypeScript checks in watch mode
 - `pnpm format` - Format code with Prettier
 - `pnpm lint` - Run linting checks
-- `pnpm process-all` - Run full data processing pipeline
 
-### Data Processing Scripts
-
+### Data Processing Pipeline
 - `pnpm gen:geojson` - Generate GeoJSON from CSV data
 - `pnpm gen:pmtiles` - Convert GeoJSON to PMTiles format
-- `pnpm upload:geojson` - Upload processed GeoJSON to storage (for search)
-- `pnpm upload:pmtiles` - Upload PMTiles to storage (for map rendering)
+- `pnpm upload:geojson` - Upload processed GeoJSON to storage
+- `pnpm upload:pmtiles` - Upload PMTiles to storage
 - `pnpm upload:styles` - Upload map styles
+- `pnpm process-all` - Run full data processing pipeline
+
+### Deployment
+- `pnpm publish:app` - Deploy the application
+- `pnpm build-and-publish` - Build and deploy in one step
 
 ## Technology Stack
 
@@ -69,10 +76,11 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
   - `/routes` - SvelteKit routes
   - `/lib` - Shared components and utilities
     - `/components` - Reusable UI components
+      - `/search` - Search-related components
+      - `/legend` - Map legend components
     - `/types` - TypeScript type definitions
-    - `/utils` - Utility functions and helpers
-- `/scripts` - Data processing and upload scripts
-- `/styles` - Map styles and theme configuration
+    - `/utils` - Utility functions, constants, and configuration
+- `/scripts` - Data processing and deployment scripts
 - `/static` - Static assets
 
 ## Credits
