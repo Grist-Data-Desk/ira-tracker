@@ -1,15 +1,20 @@
 <script lang="ts">
-  import { projects, searchResults, searchQuery, searchRadius, isSearching, isDataLoading, hasSearched, activeFilters, selectedColorMode } from '$lib/stores';
+  import { 
+    searchResults, 
+    searchQuery, 
+    searchRadius, 
+    isSearching, 
+    isDataLoading, 
+    activeFilters, 
+    selectedColorMode 
+  } from '$lib/stores';
   import { CATEGORIES } from '$lib/utils/constants';
-  import { onMount, tick } from 'svelte';
   import { debounce } from 'lodash-es';
 
   export let onSearch: () => void;
   let isSpinning = false;
   let hasCharged = false;
   let previousAmount = 0;
-  let searchOpen = false;
-  let innerWidth: number;
   let searchInput: HTMLInputElement;
   let suggestions: Array<{
     place_name: string;
@@ -18,6 +23,7 @@
   }> = [];
   let isFetchingSuggestions = false;
   let showSuggestions = false;
+  let suggestionsContainer: HTMLDivElement;
 
   const handleSearch = () => {
     previousAmount = totalAwardAmount;
@@ -76,13 +82,6 @@
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
 
-  $: formattedTotalAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(totalAwardAmount);
-
   function validateLatLon(input: string): boolean {
     const latLonRe = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
 
@@ -135,6 +134,21 @@
     fetchSuggestions(input.value);
   }
 
+  function onKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      showSuggestions = false;
+      handleSearch();
+    }
+  }
+
+  function onSuggestionKeyDown(event: KeyboardEvent, suggestion: typeof suggestions[0]) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSuggestionClick(suggestion);
+    }
+  }
+
   function onSuggestionClick(suggestion: typeof suggestions[0]) {
     $searchQuery = suggestion.place_name;
     showSuggestions = false;
@@ -147,7 +161,12 @@
     }
   }
 
-  function onInputBlur() {
+  function onInputBlur(event: FocusEvent) {
+    const relatedTarget = event.relatedTarget as HTMLElement;
+    if (suggestionsContainer?.contains(relatedTarget)) {
+      return;
+    }
+    
     setTimeout(() => {
       showSuggestions = false;
     }, 200);
@@ -312,6 +331,7 @@
           bind:this={searchInput}
           bind:value={$searchQuery}
           on:input={onInput}
+          on:keydown={onKeyDown}
           on:focus={onInputFocus}
           on:blur={onInputBlur}
           class="search-input bg-white/50 border-slate-300 border p-1.5 w-full min-w-[100px] font-['Basis_Grotesque'] rounded focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
@@ -324,13 +344,14 @@
           </div>
         {/if}
         {#if showSuggestions && suggestions.length > 0}
-          <div class="suggestions">
+          <div class="suggestions" bind:this={suggestionsContainer}>
             {#each suggestions as suggestion}
               <div 
                 class="suggestion"
                 role="button"
                 tabindex="0"
                 on:mousedown={() => onSuggestionClick(suggestion)}
+                on:keydown={(e) => onSuggestionKeyDown(e, suggestion)}
               >
                 <div class="suggestion-main">{suggestion.text}</div>
                 <div class="suggestion-secondary">
@@ -381,9 +402,9 @@
       <div class="transition-all duration-300 ease-in-out" 
            style="transform: translateY({$searchResults.length > 0 ? '0' : '-100%'}); 
                   opacity: {$searchResults.length > 0 ? '1' : '0'}; 
-                  margin-top: {$searchResults.length > 0 ? '0.25rem' : '-5rem'};">
+                  margin-top: {$searchResults.length > 0 ? '0.25rem' : '-10rem'};">
         <div class="text-sm font-['Basis_Grotesque'] text-left bg-white/50 p-2.5 rounded-lg border border-slate-200">
-          <p class="text-slate-600">
+          <p class="text-slate-600 mt-1 text-left">
             Total funding across <span class="font-bold text-emerald-600">{filteredResults.length} project{filteredResults.length === 1 ? '' : 's'}</span> in search radius
             {#if $activeFilters[$selectedColorMode].size > 0}
               (filtered by {$selectedColorMode === 'fundingSource' ? 'funding source' : $selectedColorMode} to include {

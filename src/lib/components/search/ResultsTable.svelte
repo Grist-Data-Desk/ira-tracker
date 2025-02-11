@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { slide } from 'svelte/transition';
   import { orderBy } from 'lodash-es';
   import type { Project } from '$lib/types';
   import { searchResults, isSearching, hasSearched, activeFilters, selectedColorMode, allPoints, isDataLoading, currentTableCount } from '$lib/stores';
-  import { COLORS, CATEGORIES } from '$lib/utils/constants';
+  import { CATEGORIES } from '$lib/utils/constants';
 
   const ROW_HEIGHT = 33;
   const ROWS = 7;

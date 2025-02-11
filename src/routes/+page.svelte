@@ -17,7 +17,7 @@
   import * as pmtiles from 'pmtiles';
   import 'maplibre-gl/dist/maplibre-gl.css';
   import * as turf from '@turf/turf';
-  import type { Point, Feature, GeoJsonProperties } from 'geojson';
+  import type { Point, Feature } from 'geojson';
   import '../app.css';
   import { ProjectPopup } from '$lib/utils/popup';
   import SearchPanel from '$lib/components/search/SearchPanel.svelte';
@@ -25,9 +25,8 @@
   import Legend from '$lib/components/legend/Legend.svelte';
   import { SOURCE_CONFIG, LAYER_CONFIG, DO_SPACES_URL, PMTILES_PATH, GEOJSON_PATH, STYLES_PATH, getCurrentColorExpressions } from '$lib/utils/config';
   import { get } from 'svelte/store';
-  import type { ProjectFeatureCollection, IndexedFeatureCollection } from '$lib/types';
+  import type { ProjectFeatureCollection, Project } from '$lib/types';
   import { writable } from 'svelte/store';
-  import { orderBy } from 'lodash-es';
 
   class ResetViewControl {
     onAdd(map: maplibregl.Map) {
@@ -80,12 +79,9 @@
   }
 
   let map: maplibregl.Map;
-
   let innerWidth: number;
-  let innerHeight: number;
   let browser = false;
   let currentPopup: maplibregl.Popup | null = null;
-
   let pmtilesInstance: pmtiles.PMTiles;
 
   $: isTabletOrAbove = innerWidth > TABLET_BREAKPOINT;
@@ -235,6 +231,35 @@
     }
   }
 
+  const featureToProject = (feature: Feature<Point>): Project => {
+    const props = feature.properties || {};
+    const coords = feature.geometry.coordinates as [number, number];
+    return {
+      uid: props.UID || '',
+      dataSource: props['Data Source'] || '',
+      fundingSource: props['Funding Source'] || '',
+      programId: props['Program ID'] || '',
+      programName: props['Program Name'] || '',
+      projectName: props['Project Name'] || '',
+      projectDescription: props['Project Description'] || '',
+      projectLocationType: props['Project Location Type'] || '',
+      city: props.City || '',
+      county: props.County || '',
+      tribe: props.Tribe || '',
+      state: props.State || '',
+      congressionalDistrict: props['118th CD'] || '',
+      fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
+      link: props.Link || '',
+      agencyName: props['Agency Name'] || '',
+      bureauName: props['Bureau Name'] || '',
+      category: props.Category || '',
+      subcategory: props.Subcategory || '',
+      programType: props['Program Type'] || '',
+      latitude: coords[1],
+      longitude: coords[0]
+    };
+  };
+
   async function searchProjects() {
     isSearching.set(true);
     hasSearched.set(true);
@@ -300,10 +325,9 @@
 
       const $points = get(allPoints);
       if ($points.index) {
-        // Calculate a bounding box that fully encompasses the search radius
-        const searchRadiusInKm = $searchRadius * 1.60934; // Convert miles to km
-        const latKm = 110.574; // Approximate km per degree of latitude
-        const lonKm = 111.320 * Math.cos(lat * Math.PI / 180); // Approximate km per degree of longitude at this latitude
+        const searchRadiusInKm = $searchRadius * 1.60934;
+        const latKm = 110.574;
+        const lonKm = 111.320 * Math.cos(lat * Math.PI / 180);
         
         const latDelta = searchRadiusInKm / latKm;
         const lonDelta = searchRadiusInKm / lonKm;
@@ -326,35 +350,8 @@
             return distance <= $searchRadius;
           });
 
-        const projects = nearbyFeatures.map((feature: Feature<Point>) => {
-          const props = feature.properties || {};
-          const coords = feature.geometry.coordinates as [number, number];
-          return {
-            uid: props.UID || '',
-            dataSource: props['Data Source'] || '',
-            fundingSource: props['Funding Source'] || '',
-            programId: props['Program ID'] || '',
-            programName: props['Program Name'] || '',
-            projectName: props['Project Name'] || '',
-            projectDescription: props['Project Description'] || '',
-            projectLocationType: props['Project Location Type'] || '',
-            city: props.City || '',
-            county: props.County || '',
-            tribe: props.Tribe || '',
-            state: props.State || '',
-            congressionalDistrict: props['118th CD'] || '',
-            fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
-            link: props.Link || '',
-            agencyName: props['Agency Name'] || '',
-            bureauName: props['Bureau Name'] || '',
-            category: props.Category || '',
-            subcategory: props.Subcategory || '',
-            programType: props['Program Type'] || '',
-            latitude: coords[1],
-            longitude: coords[0]
-          };
-        });
-        
+        const projects: Project[] = nearbyFeatures.map(featureToProject);
+
         searchResults.set(projects);
         currentTableCount.set(projects.length);
 
@@ -385,63 +382,37 @@
 
   const resultsExpanded = writable(false);
 
-  $: filteredResults = ($hasSearched ? $searchResults : $allPoints.collection?.features.map(feature => {
-    const props = feature.properties || {};
-    const coords = feature.geometry.coordinates as [number, number];
-    return {
-      uid: props.UID || '',
-      dataSource: props['Data Source'] || '',
-      fundingSource: props['Funding Source'] || '',
-      programId: props['Program ID'] || '',
-      programName: props['Program Name'] || '',
-      projectName: props['Project Name'] || '',
-      projectDescription: props['Project Description'] || '',
-      projectLocationType: props['Project Location Type'] || '',
-      city: props.City || '',
-      county: props.County || '',
-      tribe: props.Tribe || '',
-      state: props.State || '',
-      congressionalDistrict: props['118th CD'] || '',
-      fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
-      link: props.Link || '',
-      agencyName: props['Agency Name'] || '',
-      bureauName: props['Bureau Name'] || '',
-      category: props.Category || '',
-      subcategory: props.Subcategory || '',
-      programType: props['Program Type'] || '',
-      latitude: coords[1],
-      longitude: coords[0]
-    };
-  }) || []).filter(project => {
-    const currentMode = $selectedColorMode;
-    const currentFilters = $activeFilters[currentMode];
-    
-    if (currentFilters.size === 0) return true;
-    
-    let fieldValue = '';
-    switch (currentMode) {
-      case 'agency':
-        fieldValue = project.agencyName;
-        break;
-      case 'category':
-        fieldValue = project.category;
-        break;
-      case 'fundingSource':
-        fieldValue = project.fundingSource;
-        break;
-    }
-    
-    const isInMainCategories = currentFilters.has(fieldValue);
-    const mainCategories = currentMode === 'agency' 
-      ? CATEGORIES.agency 
-      : currentMode === 'category' 
-        ? CATEGORIES.category 
-        : CATEGORIES.fundingSource;
-        
-    const isOther = !mainCategories.includes(fieldValue);
-    
-    return isInMainCategories || (currentFilters.has('Other') && isOther);
-  });
+  $: filteredResults = ($hasSearched ? $searchResults : $allPoints.collection?.features.map(featureToProject) || [])
+    .filter(project => {
+      const currentMode = $selectedColorMode;
+      const currentFilters = $activeFilters[currentMode];
+      
+      if (currentFilters.size === 0) return true;
+      
+      let fieldValue = '';
+      switch (currentMode) {
+        case 'agency':
+          fieldValue = project.agencyName;
+          break;
+        case 'category':
+          fieldValue = project.category;
+          break;
+        case 'fundingSource':
+          fieldValue = project.fundingSource;
+          break;
+      }
+      
+      const isInMainCategories = currentFilters.has(fieldValue);
+      const mainCategories = currentMode === 'agency' 
+        ? CATEGORIES.agency 
+        : currentMode === 'category' 
+          ? CATEGORIES.category 
+          : CATEGORIES.fundingSource;
+          
+      const isOther = !mainCategories.includes(fieldValue);
+      
+      return isInMainCategories || (currentFilters.has('Other') && isOther);
+    });
 
   $: currentTableCount.set(filteredResults.length);
 
@@ -528,33 +499,7 @@
               const key = `${coordinates[0]},${coordinates[1]}`;
               const locationFeatures = featuresByLocation[key];
 
-              const projects = locationFeatures.map(feature => {
-                const props = feature.properties;
-                return {
-                    uid: props['UID'],
-                    dataSource: props['Data Source'],
-                    fundingSource: props['Funding Source'],
-                    programId: props['Program ID'],
-                    programName: props['Program Name'],
-                    projectName: props['Project Name'],
-                    projectDescription: props['Project Description'],
-                    projectLocationType: props['Project Location Type'],
-                    city: props.City,
-                    county: props.County,
-                    tribe: props.Tribe,
-                    state: props.State,
-                    congressionalDistrict: props['118th CD'],
-                    fundingAmount: props['Funding Amount'],
-                    link: props.Link,
-                    agencyName: props['Agency Name'],
-                    bureauName: props['Bureau Name'],
-                    category: props.Category,
-                    subcategory: props.Subcategory,
-                    programType: props['Program Type'],
-                    latitude: coordinates[1],
-                    longitude: coordinates[0]
-                };
-              });
+              const projects: Project[] = locationFeatures.map(featureToProject);
 
               if (currentPopup) {
                   currentPopup.remove();
@@ -571,8 +516,8 @@
             'interpolate',
             ['linear'],
             ['zoom'],
-            2, 3,  // Size at low zoom
-            8, 5   // Size at high zoom
+            2, 3,  
+            8, 5  
           ]);
 
           map.on('mouseenter', LAYER_CONFIG.whProjectsPoints.id, () => {
@@ -603,7 +548,7 @@
   });
 </script>
 
-<svelte:window bind:innerWidth bind:innerHeight />
+<svelte:window bind:innerWidth />
 <main class="absolute inset-0 overflow-hidden font-['Basis_Grotesque'] flex flex-col">
   <div id="map-container" class="flex-1 relative">
     <div id="map-root"></div>
@@ -616,12 +561,25 @@
   </div>
 
   <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 transition-all duration-300 shadow-lg" 
-       style="height: {$resultsExpanded ? '40vh' : '40px'}">
-    <div class="absolute inset-x-0 top-0 h-10 bg-slate-50 border-b border-slate-200 flex items-center justify-between px-4 cursor-pointer">
-      <div class="flex items-center gap-2" on:click={() => resultsExpanded.update(v => !v)}>
+       style="height: {$resultsExpanded ? '33vh' : '40px'}">
+    <div class="absolute inset-x-0 top-0 h-10 bg-slate-50 border-b border-slate-200 flex items-center justify-between px-4">
+      <button 
+        type="button"
+        class="flex items-center gap-2 text-left appearance-none bg-transparent border-0 p-0 cursor-pointer hover:text-slate-700 transition-colors w-full"
+        on:click={() => resultsExpanded.update(v => !v)}
+        on:keydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            resultsExpanded.update(v => !v);
+          }
+        }}
+        aria-expanded={$resultsExpanded}
+        aria-controls="results-table-container"
+      >
         <svg class="w-4 h-4 transition-transform duration-300" 
              style="transform: rotate({$resultsExpanded ? '0deg' : '180deg'})" 
-             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
         <span class="font-medium text-sm">Data table</span>
@@ -634,18 +592,19 @@
             ({$currentTableCount} projects)
           {/if}
         </span>
-      </div>
+      </button>
       {#if $resultsExpanded}
         <button 
+          type="button"
           on:click|stopPropagation={() => {
             if ($resultsExpanded) {
               const event = new CustomEvent('downloadcsv');
               window.dispatchEvent(event);
             }
           }}
-          class="flex items-center gap-1.5 px-2 py-1 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded transition-colors"
+          class="flex items-center gap-1.5 h-8 px-2 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded transition-colors whitespace-nowrap"
         >
-          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
           Download CSV
@@ -654,7 +613,7 @@
     </div>
     
     {#if $resultsExpanded}
-      <div class="absolute inset-0 top-10 overflow-hidden">
+      <div id="results-table-container" class="absolute inset-0 top-10 overflow-hidden">
         <ResultsTable />
       </div>
     {/if}
