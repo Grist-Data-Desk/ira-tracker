@@ -569,7 +569,7 @@
 		<div class="absolute right-[calc(3%+48px)] top-4">
 			<Legend />
 		</div>
-		<div class="floating-panel absolute left-4 top-4 z-10 w-[400px] p-4">
+		<div class="floating-panel absolute left-[3%] top-4 z-10 w-[94%] p-4 md:left-4 md:w-[400px]">
 			<SearchPanel onSearch={searchProjects} />
 		</div>
 	</div>

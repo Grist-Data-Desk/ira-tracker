@@ -175,7 +175,7 @@
 	}
 </script>
 
-<div class="relative col-span-1 space-y-6 overflow-visible rounded-lg border border-slate-200">
+<div class="relative col-span-1 space-y-4 overflow-visible rounded-lg border border-slate-200">
 	<div class="absolute -right-[22px] -top-12 h-40 w-40 text-gold/30">
 		<svg
 			class:sun-spin={isSpinning}
@@ -192,17 +192,17 @@
 		</svg>
 	</div>
 
-	<div class="relative z-10 space-y-1">
-		<h1 class="relative text-left font-['PolySans'] text-3xl font-medium text-slate-800">
+	<div class="relative z-10">
+		<h1 class="font-['PolySans'] text-3xl font-medium text-slate-800">
 			Meet Your Local Infrastructure Projects.
 		</h1>
-		<p class="mx-auto max-w-lg text-left font-['Basis_Grotesque'] text-sm text-slate-600">
+		<p class="m-0 font-['Basis_Grotesque'] text-sm text-slate-600">
 			Find federal investments from the <span class="text-gold">Inflation Reduction Act</span> and
 			the <span class="text-cobalt">Bipartisan Infrastructure Law</span> in your area using the control
 			panel below. You can search by ZIP code, city name, coordinates, or names of known locations.
 		</p>
 	</div>
-	<div class="relative flex items-stretch gap-6">
+	<div class="relative flex items-stretch gap-2">
 		<div class="flex-[5]">
 			<label
 				class="mb-0.5 block font-['Basis_Grotesque'] text-sm font-medium text-slate-700"
@@ -218,7 +218,7 @@
 					on:keydown={onKeyDown}
 					on:focus={onInputFocus}
 					on:blur={onInputBlur}
-					class="search-input w-full min-w-[100px] rounded border border-slate-300 bg-white/50 p-1.5 font-['Basis_Grotesque'] transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+					class="search-input w-full rounded border border-slate-300 bg-white/50 p-1.5 font-['Basis_Grotesque'] transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
 					placeholder="ZIP code or city"
 					disabled={$isDataLoading}
 				/>
@@ -257,7 +257,7 @@
 				type="number"
 				id="radius"
 				bind:value={$searchRadius}
-				class="search-input w-full min-w-[50px] rounded border border-slate-300 bg-white/50 p-1.5 font-['Basis_Grotesque'] transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+				class="search-input w-full rounded border border-slate-300 bg-white/50 p-1.5 font-['Basis_Grotesque'] transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
 				min="1"
 				max="500"
 				disabled={$isDataLoading}
@@ -267,7 +267,7 @@
 		<div class="flex flex-col justify-end">
 			<button
 				on:click={handleSearch}
-				class="flex w-[100px] items-center justify-center gap-2 whitespace-nowrap rounded-md border border-emerald-600 bg-emerald-500 px-2 py-[0.375rem] font-['Basis_Grotesque'] text-white shadow-md transition-all hover:bg-emerald-600 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+				class="flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-emerald-600 bg-emerald-500 px-2 py-[0.375rem] font-['Basis_Grotesque'] text-white shadow-md transition-all hover:bg-emerald-600 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={$isDataLoading || $isSearching}
 			>
 				<svg
@@ -303,10 +303,8 @@
                   opacity: {$searchResults.length > 0 ? '1' : '0'}; 
                   margin-top: {$searchResults.length > 0 ? '0.25rem' : '-10rem'};"
 			>
-				<div
-					class="rounded-lg border border-slate-200 bg-white/50 p-2.5 text-left font-['Basis_Grotesque'] text-sm"
-				>
-					<p class="mt-1 text-left text-slate-600">
+				<div class="font-['Basis_Grotesque']">
+					<p class="m-0 text-xs text-slate-600 md:text-sm">
 						Total funding across <span class="font-bold text-emerald-600"
 							>{filteredResults.length} project{filteredResults.length === 1 ? '' : 's'}</span
 						>
@@ -354,7 +352,7 @@
 	</div>
 </div>
 
-<style>
+<style lang="postcss">
 	@keyframes spin {
 		0% {
 			transform: rotate(0deg);

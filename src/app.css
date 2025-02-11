@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+	box-sizing: border-box;
+}
+
 .maplibregl-map {
 	font-family:
 		'Basis Grotesque',
@@ -23,28 +27,13 @@
 	backdrop-filter: blur(4px);
 }
 
-#map-container {
-	height: 100%;
-	width: 100%;
-}
-
 .maplibregl-map {
 	height: 100%;
 	width: 100%;
 }
 
-@media (max-width: 640px) {
-	.absolute.left-4.top-4 {
-		left: 0;
-		top: 0;
-		width: 100%;
-		max-height: 50vh;
-		border-radius: 0;
-	}
-}
-
 .floating-panel {
-	@apply rounded-lg border border-solid border-earth bg-[#f0f0f0] shadow-md;
+	@apply rounded border border-solid border-earth bg-[#f0f0f0] shadow-md;
 }
 
 .search-input {
