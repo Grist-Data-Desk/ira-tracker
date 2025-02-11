@@ -50,8 +50,5 @@ export const CATEGORIES = {
 		'Environmental Remediation',
 		'Broadband'
 	],
-	fundingSource: [
-		'IRA',
-		'BIL'
-	]
+	fundingSource: ['IRA', 'BIL']
 };

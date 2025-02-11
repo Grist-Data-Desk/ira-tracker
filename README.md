@@ -19,17 +19,20 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 ## Getting Started
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/Grist-Data-Desk/ira-tracker
    cd ira-tracker
    ```
 
 2. Install dependencies:
+
    ```bash
    pnpm install
    ```
 
 3. Start the development server:
+
    ```bash
    pnpm dev
    ```
@@ -39,17 +42,20 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 ## Available Scripts
 
 ### Development
+
 - `pnpm dev` - Start development server
 - `pnpm build` - Build for production
 - `pnpm preview` - Preview production build
 
 ### Code Quality
+
 - `pnpm check` - Run TypeScript checks
 - `pnpm check:watch` - Run TypeScript checks in watch mode
 - `pnpm format` - Format code with Prettier
 - `pnpm lint` - Run linting checks
 
 ### Data Processing Pipeline
+
 - `pnpm gen:geojson` - Generate GeoJSON from CSV data
 - `pnpm gen:pmtiles` - Convert GeoJSON to PMTiles format
 - `pnpm upload:geojson` - Upload processed GeoJSON to storage
@@ -58,6 +64,7 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 - `pnpm process-all` - Run full data processing pipeline
 
 ### Deployment
+
 - `pnpm publish:app` - Deploy the application
 - `pnpm build-and-publish` - Build and deploy in one step
 

@@ -11,16 +11,16 @@ export const selectedColorMode = writable<ColorMode>('fundingSource');
 export const isSearching = writable<boolean>(false);
 export const isDataLoading = writable<boolean>(true);
 export const allPoints = writable<IndexedFeatureCollection>({
-  collection: {
-    type: 'FeatureCollection',
-    features: []
-  },
-  index: null
+	collection: {
+		type: 'FeatureCollection',
+		features: []
+	},
+	index: null
 });
 export const hasSearched = writable(false);
-export const activeFilters = writable<{[key: string]: Set<string>}>({
-  agency: new Set(),
-  category: new Set(),
-  fundingSource: new Set()
+export const activeFilters = writable<{ [key: string]: Set<string> }>({
+	agency: new Set(),
+	category: new Set(),
+	fundingSource: new Set()
 });
 export const currentTableCount = writable(0);

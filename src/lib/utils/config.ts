@@ -33,10 +33,7 @@ const CATEGORIES = {
 		'Environmental Remediation',
 		'Broadband'
 	],
-	fundingSource: [
-		'IRA',
-		'BIL'
-	]
+	fundingSource: ['IRA', 'BIL']
 };
 
 export const SOURCE_CONFIG: Record<string, { id: string; config: SourceSpecification }> = {
@@ -92,13 +89,7 @@ export const LAYER_CONFIG: Record<string, AddLayerObject> = {
 			visibility: 'visible'
 		},
 		paint: {
-			'circle-radius': [
-				'interpolate',
-				['linear'],
-				['zoom'],
-				0, 2,
-				22, 12
-			],
+			'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 22, 12],
 			'circle-color': createColorExpression('Funding Source', CATEGORIES.fundingSource),
 			'circle-stroke-width': 2,
 			'circle-stroke-color': '#ffffff',
@@ -130,13 +121,7 @@ export const LAYER_CONFIG: Record<string, AddLayerObject> = {
 		layout: {
 			'text-field': ['concat', ['get', 'reservation_name'], ' Reservation'],
 			'text-font': ['Basis Grotesque Pro Italic'],
-			'text-size': [
-				'interpolate',
-				['linear'],
-				['zoom'],
-				6, 12,
-				12, 16
-			],
+			'text-size': ['interpolate', ['linear'], ['zoom'], 6, 12, 12, 16],
 			'text-max-width': 7,
 			'text-letter-spacing': 0.1
 		},
