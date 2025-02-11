@@ -35,18 +35,15 @@
       btn.className = 'maplibregl-ctrl-icon maplibregl-ctrl-geolocate';
       btn.innerHTML = '🔄';
       btn.addEventListener('click', () => {
-        // Reset map view
         map.flyTo({
           center: [-98.5795, 39.8283],
           zoom: isTabletOrAbove ? 4 : 3
         });
 
-        // Clear search inputs and reset hasSearched
         searchQuery.set('');
         searchResults.set([]);
         hasSearched.set(false);
 
-        // Reset legend state
         selectedColorMode.set('fundingSource');
         activeFilters.update(filters => {
           Object.keys(filters).forEach(key => {
@@ -55,9 +52,6 @@
           return filters;
         });
 
-        // Don't set currentTableCount here - let the reactive statement handle it
-
-        // Remove search-related layers
         if (map?.getLayer('search-radius-outline')) {
           map.removeLayer('search-radius-outline');
         }
@@ -68,12 +62,10 @@
           map.removeSource('search-radius');
         }
 
-        // Show all points in PMTiles layer
         if (map?.getLayer('projects-points')) {
           map.setFilter('projects-points', null);
         }
 
-        // Clear existing popup if any
         if (currentPopup) {
           currentPopup.remove();
           currentPopup = null;
@@ -101,7 +93,6 @@
   function cleanupSearchLayers() {
     if (!map) return;
     
-    // Remove search-related layers
     if (map.getLayer('search-radius-outline')) {
       map.removeLayer('search-radius-outline');
     }
@@ -127,14 +118,12 @@
       let data;
       try {
         data = JSON.parse(decompressed) as ProjectFeatureCollection;
-        // Set initial count immediately when data is parsed
         currentTableCount.set(data.features.length);
       } catch (e) {
         console.error('Failed to parse JSON:', e);
         throw new Error('Failed to parse decompressed data as JSON');
       }
       
-      // Create spatial index from just the coordinates
       const points = data.features.map((f: Feature<Point>) => ({
         lon: f.geometry.coordinates[0],
         lat: f.geometry.coordinates[1],
@@ -152,7 +141,6 @@
         (p: PointType) => p.lat
       );
 
-      // Add all points to the index
       points.forEach(point => {
         index.add(point.lon, point.lat);
       });
@@ -170,7 +158,6 @@
     }
   }
 
-  // Function to update map filters based on active filters and current search state
   function updateMapFilters() {
     if (!map) return;
     
@@ -186,7 +173,6 @@
     
     const filters: any[] = [];
     
-    // Add search filter if we have searched
     if ($hasSearched && map.getSource('search-radius')) {
       filters.push([
         'in',
@@ -195,7 +181,6 @@
       ]);
     }
     
-    // Add legend filter if we have active filters
     if (currentFilters.size > 0) {
       let filterField;
       let mainCategories: string[];
@@ -214,23 +199,19 @@
           break;
       }
 
-      // If "Other" is selected, we need to show all points that aren't in the main categories
       if (currentFilters.has('Other')) {
         const selectedMainCategories = Array.from(currentFilters).filter(f => f !== 'Other');
         
         if (selectedMainCategories.length > 0) {
-          // Show both "Other" points and specifically selected categories
           filters.push([
             'any',
             ['!in', filterField, ...mainCategories],
             ['in', filterField, ...selectedMainCategories]
           ]);
         } else {
-          // Only show "Other" points (not in main categories)
           filters.push(['!in', filterField, ...mainCategories]);
         }
       } else {
-        // Just filter for the selected categories
         filters.push([
           'in',
           filterField,
@@ -239,7 +220,6 @@
       }
     }
     
-    // Combine filters if we have multiple
     const finalFilter = filters.length > 0 
       ? filters.length > 1 
         ? ['all', ...filters]
@@ -263,12 +243,10 @@
       let lat: number;
       let lon: number;
 
-      // Check if input is lat,lon coordinates
       const latLonRe = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
       if (latLonRe.test(get(searchQuery))) {
         [lat, lon] = get(searchQuery).split(',').map((coord: string) => parseFloat(coord.trim()));
         
-        // Validate coordinates
         if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
           throw new Error('Invalid coordinates');
         }
@@ -289,7 +267,6 @@
         currentPopup = null;
       }
 
-      // Clean up any existing search layers before adding new ones
       cleanupSearchLayers();
 
       const searchCenter = turf.point([lon, lat]);
@@ -408,7 +385,6 @@
 
   const resultsExpanded = writable(false);
 
-  // Add this reactive statement to keep track of filtered results
   $: filteredResults = ($hasSearched ? $searchResults : $allPoints.collection?.features.map(feature => {
     const props = feature.properties || {};
     const coords = feature.geometry.coordinates as [number, number];
@@ -467,7 +443,6 @@
     return isInMainCategories || (currentFilters.has('Other') && isOther);
   });
 
-  // Update count whenever filtered results change
   $: currentTableCount.set(filteredResults.length);
 
   onMount(async () => {
@@ -540,7 +515,6 @@
           map.on('click', LAYER_CONFIG.whProjectsPoints.id, (e) => {
               if (!e.features?.length) return;
               
-              // Group features by exact coordinates to handle overlapping points
               const featuresByLocation = e.features.reduce((acc: { [key: string]: any[] }, feature: any) => {
                 if (!feature.geometry || feature.geometry.type !== 'Point') return acc;
                 const coords = (feature.geometry as { type: 'Point', coordinates: [number, number] }).coordinates;
@@ -641,10 +615,8 @@
     </div>
   </div>
 
-  <!-- Updated Results Table Section -->
   <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 transition-all duration-300 shadow-lg" 
        style="height: {$resultsExpanded ? '40vh' : '40px'}">
-    <!-- Header/Toggle Bar -->
     <div class="absolute inset-x-0 top-0 h-10 bg-slate-50 border-b border-slate-200 flex items-center justify-between px-4 cursor-pointer">
       <div class="flex items-center gap-2" on:click={() => resultsExpanded.update(v => !v)}>
         <svg class="w-4 h-4 transition-transform duration-300" 
@@ -681,7 +653,6 @@
       {/if}
     </div>
     
-    <!-- Results Table Container -->
     {#if $resultsExpanded}
       <div class="absolute inset-0 top-10 overflow-hidden">
         <ResultsTable />

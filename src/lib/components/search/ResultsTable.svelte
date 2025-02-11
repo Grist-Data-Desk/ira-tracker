@@ -90,7 +90,6 @@
     }
   }
 
-  // Filter results based on legend selection
   $: filteredResults = ($hasSearched ? $searchResults : $allPoints.collection?.features.map(feature => {
     const props = feature.properties || {};
     const coords = feature.geometry.coordinates as [number, number];
@@ -167,7 +166,6 @@
       appendRows(0, n);
     }
 
-    // Add event listener for CSV download
     const handleDownload = () => downloadCurrentView();
     window.addEventListener('downloadcsv', handleDownload);
 
@@ -177,22 +175,17 @@
   });
 
   function downloadCurrentView() {
-    // Define CSV headers based on our columns
     const headers = cols.map(col => col.label).join(',');
     
-    // Use filteredResults which already handles search/filter state
     const rows = filteredResults.map(row => {
       return cols.map(col => {
         let value = row[col.key as keyof Project];
-        // For link field, use the URL directly
         if (col.key === 'link') {
           return value || '';
         }
-        // Format if needed
         if (col.format && value && col.key !== 'link') {
           value = col.format(value).replace(/<[^>]*>/g, ''); // Strip HTML tags
         }
-        // Escape quotes and wrap in quotes if contains comma
         if (typeof value === 'string') {
           value = value.includes(',') ? `"${value.replace(/"/g, '""')}"` : value;
         }
@@ -200,10 +193,8 @@
       }).join(',');
     }).join('\n');
     
-    // Combine headers and rows
     const csv = `${headers}\n${rows}`;
     
-    // Create and trigger download
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);

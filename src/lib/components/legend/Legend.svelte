@@ -64,7 +64,6 @@
       if (currentFilters.has(label)) {
         currentFilters.delete(label);
       } else {
-        // If this is the first selection, clear other filters first
         if (currentFilters.size === 0) {
           currentFilters.add(label);
         } else {
@@ -78,15 +77,12 @@
 
   $: isItemActive = (label: string) => $activeFilters[$selectedColorMode].has(label);
 
-  // Find the longest label across all categories
   const longestLabel = Math.max(
     ...Object.values(legendItems).flatMap(items => 
       items.map(item => item.label.length)
     )
   );
   
-  // Add roughly 60px to account for padding, icon, and spacing
-  // Multiply character count by approximate character width
   const minPanelWidth = longestLabel * 6 + 20;
 </script>
 

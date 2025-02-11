@@ -34,7 +34,6 @@
     return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
-  // Filter results based on legend selection if toggle is on
   $: filteredResults = $searchResults.filter(project => {
     const currentMode = $selectedColorMode;
     const currentFilters = $activeFilters[currentMode];
@@ -54,10 +53,8 @@
         break;
     }
     
-    // Check if the value is in the main categories
     const isInMainCategories = currentFilters.has(fieldValue);
     
-    // If "Other" is selected, also include items not in the main category list
     const mainCategories = currentMode === 'agency' 
       ? CATEGORIES.agency 
       : currentMode === 'category' 
@@ -151,7 +148,6 @@
   }
 
   function onInputBlur() {
-    // Delay hiding suggestions to allow for click events
     setTimeout(() => {
       showSuggestions = false;
     }, 200);
