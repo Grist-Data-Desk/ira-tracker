@@ -360,7 +360,7 @@
 
 				map?.fitBounds(bounds, {
 					padding: {
-						top: 50,
+						top: isTabletOrAbove ? 50 : 400,
 						bottom: 50,
 						left: isTabletOrAbove ? 450 : 50,
 						right: 50
