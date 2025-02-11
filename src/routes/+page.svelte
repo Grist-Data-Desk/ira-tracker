@@ -1,6 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { searchResults, searchQuery, searchRadius, allPoints, selectedColorMode, isSearching, isDataLoading, hasSearched, activeFilters } from '$lib/stores';
+  import { 
+    searchResults, 
+    searchQuery, 
+    searchRadius, 
+    allPoints, 
+    selectedColorMode, 
+    isSearching, 
+    isDataLoading, 
+    hasSearched, 
+    activeFilters,
+    currentTableCount 
+  } from '$lib/stores';
   import { TABLET_BREAKPOINT, CATEGORIES } from '$lib/utils/constants';
   import maplibregl from 'maplibre-gl';
   import * as pmtiles from 'pmtiles';
@@ -15,6 +26,8 @@
   import { SOURCE_CONFIG, LAYER_CONFIG, DO_SPACES_URL, PMTILES_PATH, GEOJSON_PATH, STYLES_PATH, getCurrentColorExpressions } from '$lib/utils/config';
   import { get } from 'svelte/store';
   import type { ProjectFeatureCollection, IndexedFeatureCollection } from '$lib/types';
+  import { writable } from 'svelte/store';
+  import { orderBy } from 'lodash-es';
 
   class ResetViewControl {
     onAdd(map: maplibregl.Map) {
@@ -41,6 +54,8 @@
           });
           return filters;
         });
+
+        // Don't set currentTableCount here - let the reactive statement handle it
 
         // Remove search-related layers
         if (map?.getLayer('search-radius-outline')) {
@@ -112,6 +127,8 @@
       let data;
       try {
         data = JSON.parse(decompressed) as ProjectFeatureCollection;
+        // Set initial count immediately when data is parsed
+        currentTableCount.set(data.features.length);
       } catch (e) {
         console.error('Failed to parse JSON:', e);
         throw new Error('Failed to parse decompressed data as JSON');
@@ -360,7 +377,9 @@
             longitude: coords[0]
           };
         });
+        
         searchResults.set(projects);
+        currentTableCount.set(projects.length);
 
         updateMapFilters();
 
@@ -381,10 +400,75 @@
     } catch (error) {
       console.error('Search error:', error);
       searchResults.set([]);
+      currentTableCount.set($allPoints.collection?.features.length ?? 0);
     } finally {
       isSearching.set(false);
     }
   }
+
+  const resultsExpanded = writable(false);
+
+  // Add this reactive statement to keep track of filtered results
+  $: filteredResults = ($hasSearched ? $searchResults : $allPoints.collection?.features.map(feature => {
+    const props = feature.properties || {};
+    const coords = feature.geometry.coordinates as [number, number];
+    return {
+      uid: props.UID || '',
+      dataSource: props['Data Source'] || '',
+      fundingSource: props['Funding Source'] || '',
+      programId: props['Program ID'] || '',
+      programName: props['Program Name'] || '',
+      projectName: props['Project Name'] || '',
+      projectDescription: props['Project Description'] || '',
+      projectLocationType: props['Project Location Type'] || '',
+      city: props.City || '',
+      county: props.County || '',
+      tribe: props.Tribe || '',
+      state: props.State || '',
+      congressionalDistrict: props['118th CD'] || '',
+      fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
+      link: props.Link || '',
+      agencyName: props['Agency Name'] || '',
+      bureauName: props['Bureau Name'] || '',
+      category: props.Category || '',
+      subcategory: props.Subcategory || '',
+      programType: props['Program Type'] || '',
+      latitude: coords[1],
+      longitude: coords[0]
+    };
+  }) || []).filter(project => {
+    const currentMode = $selectedColorMode;
+    const currentFilters = $activeFilters[currentMode];
+    
+    if (currentFilters.size === 0) return true;
+    
+    let fieldValue = '';
+    switch (currentMode) {
+      case 'agency':
+        fieldValue = project.agencyName;
+        break;
+      case 'category':
+        fieldValue = project.category;
+        break;
+      case 'fundingSource':
+        fieldValue = project.fundingSource;
+        break;
+    }
+    
+    const isInMainCategories = currentFilters.has(fieldValue);
+    const mainCategories = currentMode === 'agency' 
+      ? CATEGORIES.agency 
+      : currentMode === 'category' 
+        ? CATEGORIES.category 
+        : CATEGORIES.fundingSource;
+        
+    const isOther = !mainCategories.includes(fieldValue);
+    
+    return isInMainCategories || (currentFilters.has('Other') && isOther);
+  });
+
+  // Update count whenever filtered results change
+  $: currentTableCount.set(filteredResults.length);
 
   onMount(async () => {
     browser = true;
@@ -546,15 +630,62 @@
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
-<main class="absolute inset-0 overflow-hidden font-['Basis_Grotesque']">
-  <div id="map-container" class="absolute inset-0">
-  <div id="map-root"></div>
+<main class="absolute inset-0 overflow-hidden font-['Basis_Grotesque'] flex flex-col">
+  <div id="map-container" class="flex-1 relative">
+    <div id="map-root"></div>
     <div class="absolute right-[calc(3%+48px)] top-4">
       <Legend />
     </div>
-  </div>
-    <div class="absolute left-4 top-4 w-[400px] max-h-[calc(100vh-2rem)] flex flex-col space-y-4 floating-panel z-10 p-4 overflow-hidden">
+    <div class="absolute left-4 top-4 w-[400px] floating-panel z-10 p-4">
       <SearchPanel onSearch={searchProjects} />
-      <ResultsTable />
     </div>
+  </div>
+
+  <!-- Updated Results Table Section -->
+  <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 transition-all duration-300 shadow-lg" 
+       style="height: {$resultsExpanded ? '40vh' : '40px'}">
+    <!-- Header/Toggle Bar -->
+    <div class="absolute inset-x-0 top-0 h-10 bg-slate-50 border-b border-slate-200 flex items-center justify-between px-4 cursor-pointer">
+      <div class="flex items-center gap-2" on:click={() => resultsExpanded.update(v => !v)}>
+        <svg class="w-4 h-4 transition-transform duration-300" 
+             style="transform: rotate({$resultsExpanded ? '0deg' : '180deg'})" 
+             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+        <span class="font-medium text-sm">Data table</span>
+        <span class="text-sm text-slate-500">
+          {#if $isDataLoading}
+            (Loading...)
+          {:else if $isSearching}
+            (Searching...)
+          {:else}
+            ({$currentTableCount} projects)
+          {/if}
+        </span>
+      </div>
+      {#if $resultsExpanded}
+        <button 
+          on:click|stopPropagation={() => {
+            if ($resultsExpanded) {
+              const event = new CustomEvent('downloadcsv');
+              window.dispatchEvent(event);
+            }
+          }}
+          class="flex items-center gap-1.5 px-2 py-1 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Download CSV
+        </button>
+      {/if}
+    </div>
+    
+    <!-- Results Table Container -->
+    {#if $resultsExpanded}
+      <div class="absolute inset-0 top-10 overflow-hidden">
+        <ResultsTable />
+      </div>
+    {/if}
+  </div>
 </main>

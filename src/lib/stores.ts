@@ -23,4 +23,4 @@ export const activeFilters = writable<{[key: string]: Set<string>}>({
   category: new Set(),
   fundingSource: new Set()
 });
-export const filterResultsByLegend = writable(false);
+export const currentTableCount = writable(0);

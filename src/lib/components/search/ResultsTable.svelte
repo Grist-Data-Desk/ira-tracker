@@ -3,7 +3,7 @@
   import { slide } from 'svelte/transition';
   import { orderBy } from 'lodash-es';
   import type { Project } from '$lib/types';
-  import { searchResults, isSearching, hasSearched, filterResultsByLegend, activeFilters, selectedColorMode } from '$lib/stores';
+  import { searchResults, isSearching, hasSearched, activeFilters, selectedColorMode, allPoints, isDataLoading, currentTableCount } from '$lib/stores';
   import { COLORS, CATEGORIES } from '$lib/utils/constants';
 
   const ROW_HEIGHT = 33;
@@ -90,65 +90,149 @@
     }
   }
 
-  // Filter results based on legend selection if toggle is on
-  $: filteredResults = $filterResultsByLegend 
-    ? $searchResults.filter(project => {
-        const currentMode = $selectedColorMode;
-        const currentFilters = $activeFilters[currentMode];
+  // Filter results based on legend selection
+  $: filteredResults = ($hasSearched ? $searchResults : $allPoints.collection?.features.map(feature => {
+    const props = feature.properties || {};
+    const coords = feature.geometry.coordinates as [number, number];
+    return {
+      uid: props.UID || '',
+      dataSource: props['Data Source'] || '',
+      fundingSource: props['Funding Source'] || '',
+      programId: props['Program ID'] || '',
+      programName: props['Program Name'] || '',
+      projectName: props['Project Name'] || '',
+      projectDescription: props['Project Description'] || '',
+      projectLocationType: props['Project Location Type'] || '',
+      city: props.City || '',
+      county: props.County || '',
+      tribe: props.Tribe || '',
+      state: props.State || '',
+      congressionalDistrict: props['118th CD'] || '',
+      fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
+      link: props.Link || '',
+      agencyName: props['Agency Name'] || '',
+      bureauName: props['Bureau Name'] || '',
+      category: props.Category || '',
+      subcategory: props.Subcategory || '',
+      programType: props['Program Type'] || '',
+      latitude: coords[1],
+      longitude: coords[0]
+    };
+  }) || []).filter(project => {
+    const currentMode = $selectedColorMode;
+    const currentFilters = $activeFilters[currentMode];
+    
+    if (currentFilters.size === 0) return true;
+    
+    let fieldValue = '';
+    switch (currentMode) {
+      case 'agency':
+        fieldValue = project.agencyName;
+        break;
+      case 'category':
+        fieldValue = project.category;
+        break;
+      case 'fundingSource':
+        fieldValue = project.fundingSource;
+        break;
+    }
+    
+    const isInMainCategories = currentFilters.has(fieldValue);
+    const mainCategories = currentMode === 'agency' 
+      ? CATEGORIES.agency 
+      : currentMode === 'category' 
+        ? CATEGORIES.category 
+        : CATEGORIES.fundingSource;
         
-        if (currentFilters.size === 0) return true;
-        
-        let fieldValue = '';
-        switch (currentMode) {
-          case 'agency':
-            fieldValue = project.agencyName;
-            break;
-          case 'category':
-            fieldValue = project.category;
-            break;
-          case 'fundingSource':
-            fieldValue = project.fundingSource;
-            break;
-        }
-        
-        // Check if the value is in the main categories
-        const isInMainCategories = currentFilters.has(fieldValue);
-        
-        // If "Other" is selected, also include items not in the main category list
-        const mainCategories = currentMode === 'agency' 
-          ? CATEGORIES.agency 
-          : currentMode === 'category' 
-            ? CATEGORIES.category 
-            : CATEGORIES.fundingSource;
-            
-        const isOther = !mainCategories.includes(fieldValue);
-        
-        return isInMainCategories || (currentFilters.has('Other') && isOther);
-      })
-    : $searchResults;
+    const isOther = !mainCategories.includes(fieldValue);
+    
+    return isInMainCategories || (currentFilters.has('Other') && isOther);
+  });
 
-  $: if (filteredResults) {
-    materialize(filteredResults);
+  $: {
+    if (filteredResults) {
+      materialize(filteredResults);
+      if (!$isDataLoading && ($hasSearched || $activeFilters[$selectedColorMode].size > 0)) {
+        if ($hasSearched) {
+          currentTableCount.set($searchResults.length);
+        } else {
+          currentTableCount.set(filteredResults.length);
+        }
+      }
+    }
   }
 
   onMount(() => {
     if (filteredResults) {
       appendRows(0, n);
     }
+
+    // Add event listener for CSV download
+    const handleDownload = () => downloadCurrentView();
+    window.addEventListener('downloadcsv', handleDownload);
+
+    return () => {
+      window.removeEventListener('downloadcsv', handleDownload);
+    };
   });
+
+  function downloadCurrentView() {
+    // Define CSV headers based on our columns
+    const headers = cols.map(col => col.label).join(',');
+    
+    // Use filteredResults which already handles search/filter state
+    const rows = filteredResults.map(row => {
+      return cols.map(col => {
+        let value = row[col.key as keyof Project];
+        // For link field, use the URL directly
+        if (col.key === 'link') {
+          return value || '';
+        }
+        // Format if needed
+        if (col.format && value && col.key !== 'link') {
+          value = col.format(value).replace(/<[^>]*>/g, ''); // Strip HTML tags
+        }
+        // Escape quotes and wrap in quotes if contains comma
+        if (typeof value === 'string') {
+          value = value.includes(',') ? `"${value.replace(/"/g, '""')}"` : value;
+        }
+        return value || '';
+      }).join(',');
+    }).join('\n');
+    
+    // Combine headers and rows
+    const csv = `${headers}\n${rows}`;
+    
+    // Create and trigger download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'ira-bil-projects.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 </script>
 
-<div class="overflow-hidden relative {$searchResults.length > 0 ? 'h-[calc(100vh-400px)] sm:h-[calc(100vh-350px)]' : ''} bg-slate-50/90 rounded-lg border border-slate-200 font-['Basis_Grotesque']" 
-     transition:slide>
-  {#if $isSearching}
-    <div class="flex items-center justify-center h-32">
+<div class="h-full bg-slate-50/90 font-['Basis_Grotesque']">
+  {#if $isDataLoading}
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="flex items-center gap-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-2 border-emerald-500 border-t-transparent"></div>
+        <p class="text-sm text-slate-500">Loading project data...</p>
+      </div>
+    </div>
+  {:else if $isSearching}
+    <div class="absolute inset-0 flex items-center justify-center">
       <div class="flex items-center gap-3">
         <div class="animate-spin rounded-full h-6 w-6 border-2 border-emerald-500 border-t-transparent"></div>
         <p class="text-sm text-slate-500">Searching for projects...</p>
       </div>
     </div>
-  {:else if $searchResults.length > 0}
-    <div class="overflow-x-auto overflow-y-auto absolute inset-0"
+  {:else}
+    <div class="overflow-x-auto overflow-y-auto h-full"
          bind:this={root} 
          on:scroll={onScroll}>
       <table class="min-w-full table-auto border-collapse">
@@ -185,22 +269,6 @@
           {/each}
         </tbody>
       </table>
-    </div>
-  {:else}
-    <div class="flex flex-col items-center justify-center h-32 gap-3">
-      <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-        <svg class="w-6 h-6 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
-      <div class="text-center">
-        {#if !$hasSearched}
-          <p class="text-sm text-slate-400">Try searching for projects using the control panel above</p>
-        {:else}
-          <p class="text-sm text-slate-500">No projects found</p>
-          <p class="text-xs text-slate-400">Try another location or increasing your search radius</p>
-        {/if}
-      </div>
     </div>
   {/if}
 </div>

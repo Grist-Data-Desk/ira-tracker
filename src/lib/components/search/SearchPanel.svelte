@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { projects, searchResults, searchQuery, searchRadius, isSearching, isDataLoading, hasSearched, filterResultsByLegend, activeFilters, selectedColorMode } from '$lib/stores';
+  import { projects, searchResults, searchQuery, searchRadius, isSearching, isDataLoading, hasSearched, activeFilters, selectedColorMode } from '$lib/stores';
   import { CATEGORIES } from '$lib/utils/constants';
   import { onMount, tick } from 'svelte';
   import { debounce } from 'lodash-es';
@@ -35,41 +35,39 @@
   }
 
   // Filter results based on legend selection if toggle is on
-  $: filteredResults = $filterResultsByLegend 
-    ? $searchResults.filter(project => {
-        const currentMode = $selectedColorMode;
-        const currentFilters = $activeFilters[currentMode];
+  $: filteredResults = $searchResults.filter(project => {
+    const currentMode = $selectedColorMode;
+    const currentFilters = $activeFilters[currentMode];
+    
+    if (currentFilters.size === 0) return true;
+    
+    let fieldValue = '';
+    switch (currentMode) {
+      case 'agency':
+        fieldValue = project.agencyName;
+        break;
+      case 'category':
+        fieldValue = project.category;
+        break;
+      case 'fundingSource':
+        fieldValue = project.fundingSource;
+        break;
+    }
+    
+    // Check if the value is in the main categories
+    const isInMainCategories = currentFilters.has(fieldValue);
+    
+    // If "Other" is selected, also include items not in the main category list
+    const mainCategories = currentMode === 'agency' 
+      ? CATEGORIES.agency 
+      : currentMode === 'category' 
+        ? CATEGORIES.category 
+        : CATEGORIES.fundingSource;
         
-        if (currentFilters.size === 0) return true;
-        
-        let fieldValue = '';
-        switch (currentMode) {
-          case 'agency':
-            fieldValue = project.agencyName;
-            break;
-          case 'category':
-            fieldValue = project.category;
-            break;
-          case 'fundingSource':
-            fieldValue = project.fundingSource;
-            break;
-        }
-        
-        // Check if the value is in the main categories
-        const isInMainCategories = currentFilters.has(fieldValue);
-        
-        // If "Other" is selected, also include items not in the main category list
-        const mainCategories = currentMode === 'agency' 
-          ? CATEGORIES.agency 
-          : currentMode === 'category' 
-            ? CATEGORIES.category 
-            : CATEGORIES.fundingSource;
-            
-        const isOther = !mainCategories.includes(fieldValue);
-        
-        return isInMainCategories || (currentFilters.has('Other') && isOther);
-      })
-    : $searchResults;
+    const isOther = !mainCategories.includes(fieldValue);
+    
+    return isInMainCategories || (currentFilters.has('Other') && isOther);
+  });
 
   $: totalAwardAmount = filteredResults.reduce((sum, project) => {
     if (!project.fundingAmount) return sum;
@@ -287,8 +285,19 @@
 </style>
 
 <div 
-  class="col-span-1 space-y-3 bg-slate-50/90 p-4 rounded-lg border border-slate-200 relative overflow-visible"
+  class="col-span-1 space-y-6 rounded-lg border border-slate-200 relative overflow-visible"
 >
+  <div class="w-40 h-40 text-gold/30 absolute -top-12 -right-[22px]">
+    <svg class:sun-spin={isSpinning} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
+      <circle cx="50" cy="50" r="15"/>
+      <g>
+        {#each Array(12) as _, i}
+          <rect x="49" y="14" width="2" height="16" transform="rotate({i * 30} 50 50)"/>
+        {/each}
+      </g>
+    </svg>
+  </div>
+
   <div class="space-y-1 relative z-10">
     <h1 class="text-3xl font-['PolySans'] font-medium text-left text-slate-800 relative">
       Meet Your Local Infrastructure Projects.
@@ -297,8 +306,8 @@
       Find federal investments from the <span class="text-gold">Inflation Reduction Act</span> and the <span class="text-cobalt">Bipartisan Infrastructure Law</span> in your area using the control panel below. You can search by ZIP code, city name, coordinates, or names of known locations.
     </p>
   </div>
-  <div class="flex items-stretch gap-4 relative">
-    <div class="flex-1">
+  <div class="flex items-stretch gap-6 relative">
+    <div class="flex-[5]">
       <label class="block mb-0.5 text-sm font-['Basis_Grotesque'] text-slate-700 font-medium" for="search">Location</label>
       <div class="relative">
         <input 
@@ -338,13 +347,13 @@
       </div>
     </div>
 
-    <div class="flex-1">
+    <div class="w-20">
       <label class="block mb-0.5 text-sm font-['Basis_Grotesque'] text-slate-700 font-medium" for="radius">Radius (mi)</label>
       <input 
         type="number" 
         id="radius"
         bind:value={$searchRadius}
-        class="search-input bg-white/50 border-slate-300 border p-1.5 w-full min-w-[100px] font-['Basis_Grotesque'] rounded focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+        class="search-input bg-white/50 border-slate-300 border p-1.5 w-full min-w-[50px] font-['Basis_Grotesque'] rounded focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
         min="1"
         max="500"
         disabled={$isDataLoading}
@@ -354,7 +363,7 @@
     <div class="flex flex-col justify-end">
       <button 
         on:click={handleSearch}
-        class="bg-emerald-500 text-white px-4 py-[0.375rem] rounded-md hover:bg-emerald-600 transition-all font-['Basis_Grotesque'] disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.98] flex items-center gap-2 w-[110px] justify-center whitespace-nowrap"
+        class="bg-emerald-500 text-white px-2 py-[0.375rem] rounded-md hover:bg-emerald-600 transition-all font-['Basis_Grotesque'] disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg active:scale-[0.98] flex items-center gap-2 w-[100px] justify-center whitespace-nowrap border border-emerald-600"
         disabled={$isDataLoading || $isSearching}
       >
         <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -371,20 +380,6 @@
     </div>
   </div>
 
-  <div class="flex items-center justify-between">
-    <label class="flex items-center gap-3 cursor-pointer group">
-      <div class="relative">
-        <input
-          type="checkbox"
-          bind:checked={$filterResultsByLegend}
-          class="sr-only peer"
-        />
-        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 group-hover:bg-slate-300 peer-checked:group-hover:bg-emerald-600"></div>
-      </div>
-      <span class="text-sm font-['Basis_Grotesque'] text-slate-600 group-hover:text-slate-800 transition-colors">Filter results by color legend selection</span>
-    </label>
-  </div>
-
   <div class="overflow-hidden">
     {#if $searchResults.length > 0 || true}
       <div class="transition-all duration-300 ease-in-out" 
@@ -394,7 +389,7 @@
         <div class="text-sm font-['Basis_Grotesque'] text-left bg-white/50 p-2.5 rounded-lg border border-slate-200">
           <p class="text-slate-600">
             Total funding across <span class="font-bold text-emerald-600">{filteredResults.length} project{filteredResults.length === 1 ? '' : 's'}</span> in search radius
-            {#if $filterResultsByLegend && $activeFilters[$selectedColorMode].size > 0}
+            {#if $activeFilters[$selectedColorMode].size > 0}
               (filtered by {$selectedColorMode === 'fundingSource' ? 'funding source' : $selectedColorMode} to include {
                 (() => {
                   const items = Array.from($activeFilters[$selectedColorMode]);
@@ -430,18 +425,5 @@
         </div>
       </div>
     {/if}
-  </div>
-
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-7 -right-4 w-40 h-40 text-gold/30">
-      <svg class:sun-spin={isSpinning} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
-        <circle cx="50" cy="50" r="15"/>
-        <g>
-          {#each Array(12) as _, i}
-            <rect x="49" y="14" width="2" height="16" transform="rotate({i * 30} 50 50)"/>
-          {/each}
-        </g>
-      </svg>
-    </div>
   </div>
 </div>
