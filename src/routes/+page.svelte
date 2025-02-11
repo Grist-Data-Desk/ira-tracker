@@ -435,7 +435,8 @@
 				// style: 'styles/map-style-local.json',
 				center: [-98.5795, 39.8283],
 				zoom: isTabletOrAbove ? 4 : 3,
-				minZoom: 2
+				minZoom: 2,
+				attributionControl: false
 			});
 
 			map.scrollZoom.disable();
@@ -450,7 +451,6 @@
 				}),
 				'top-right'
 			);
-
 			map.addControl(new ResetViewControl(), 'top-right');
 
 			map.on('load', () => {
@@ -534,6 +534,13 @@
 				map.on('mouseleave', LAYER_CONFIG.whProjectsPoints.id, () => {
 					map.getCanvas().style.cursor = '';
 				});
+
+				if (!isTabletOrAbove) {
+					map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+					const attrib = document.querySelector('.maplibregl-ctrl-attrib');
+					attrib?.classList.remove('maplibregl-compact-show');
+					attrib?.removeAttribute('open');
+				}
 			});
 
 			const unsubscribe = activeFilters.subscribe(() => {
