@@ -25,3 +25,4 @@ export const activeFilters = writable<{ [key: string]: Set<string> }>({
 });
 export const currentTableCount = writable(0);
 export const legendOpen = writable(false);
+export const creditsExpanded = writable(true);

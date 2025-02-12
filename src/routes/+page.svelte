@@ -10,7 +10,8 @@
 		isDataLoading,
 		hasSearched,
 		activeFilters,
-		currentTableCount
+		currentTableCount,
+		creditsExpanded
 	} from '$lib/stores';
 	import { TABLET_BREAKPOINT, CATEGORIES } from '$lib/utils/constants';
 	import maplibregl from 'maplibre-gl';
@@ -36,6 +37,16 @@
 	import type { ProjectFeatureCollection, Project } from '$lib/types';
 	import { writable } from 'svelte/store';
 	import ExpandLegend from '$lib/components/legend/ExpandLegend.svelte';
+	import Credits from '$lib/components/credits/Credits.svelte';
+
+	let map: maplibregl.Map;
+	let innerWidth: number;
+	let browser = false;
+	let currentPopup: maplibregl.Popup | null = null;
+	let pmtilesInstance: pmtiles.PMTiles;
+	let geolocateControl: maplibregl.GeolocateControl | null = null;
+
+	$: isTabletOrAbove = innerWidth > TABLET_BREAKPOINT;
 
 	class ResetViewControl {
 		onAdd(map: maplibregl.Map) {
@@ -43,6 +54,14 @@
 			btn.className = 'maplibregl-ctrl-icon maplibregl-ctrl-geolocate';
 			btn.innerHTML = '🔄';
 			btn.addEventListener('click', () => {
+				if (geolocateControl) {
+					geolocateControl._watchState = 'OFF';
+					geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
+					geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
+					geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
+					geolocateControl._clearWatch();
+				}
+
 				map.flyTo({
 					center: [-98.5795, isTabletOrAbove ? 39.8283 : 49],
 					zoom: isTabletOrAbove ? 4 : 3
@@ -86,14 +105,6 @@
 		}
 		onRemove() {}
 	}
-
-	let map: maplibregl.Map;
-	let innerWidth: number;
-	let browser = false;
-	let currentPopup: maplibregl.Popup | null = null;
-	let pmtilesInstance: pmtiles.PMTiles;
-
-	$: isTabletOrAbove = innerWidth > TABLET_BREAKPOINT;
 
 	function cleanupSearchLayers() {
 		if (!map) return;
@@ -257,6 +268,15 @@
 	async function searchProjects() {
 		isSearching.set(true);
 		hasSearched.set(true);
+		creditsExpanded.set(false);
+
+		if (geolocateControl) {
+			geolocateControl._watchState = 'OFF';
+			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
+			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
+			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
+			geolocateControl._clearWatch();
+		}
 
 		try {
 			let lat: number;
@@ -361,7 +381,7 @@
 
 				map?.fitBounds(bounds, {
 					padding: {
-						top: isTabletOrAbove ? 50 : 500,
+						top: isTabletOrAbove ? 50 : 425,
 						bottom: 50,
 						left: isTabletOrAbove ? 450 : 50,
 						right: 50
@@ -433,7 +453,6 @@
 			map = new maplibregl.Map({
 				container: 'map-container',
 				style: `${DO_SPACES_URL}/${STYLES_PATH}/map-style.json`,
-				// style: 'styles/map-style-local.json',
 				center: [-98.5795, isTabletOrAbove ? 39.8283 : 49],
 				zoom: isTabletOrAbove ? 4 : 3,
 				minZoom: 2,
@@ -442,16 +461,30 @@
 
 			map.scrollZoom.disable();
 			map.scrollZoom.setWheelZoomRate(0);
-			map.addControl(new maplibregl.NavigationControl(), 'top-right');
-			map.addControl(
-				new maplibregl.GeolocateControl({
-					positionOptions: {
-						enableHighAccuracy: true
-					},
-					trackUserLocation: true
-				}),
-				'top-right'
-			);
+			map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+			geolocateControl = new maplibregl.GeolocateControl({
+				positionOptions: {
+					enableHighAccuracy: true
+				},
+				trackUserLocation: false
+			});
+			
+			geolocateControl.on('geolocate', (position) => {
+				const lat = position.coords.latitude;
+				const lon = position.coords.longitude;
+				searchQuery.set(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+				searchProjects();
+			});
+
+			// Handle error state cleanup
+			geolocateControl.on('error', () => {
+				if (geolocateControl) {
+					geolocateControl._watchState = 'OFF';
+					geolocateControl._clearWatch();
+				}
+			});
+			
+			map.addControl(geolocateControl, 'top-right');
 			map.addControl(new ResetViewControl(), 'top-right');
 
 			map.on('load', () => {
@@ -558,7 +591,7 @@
 			};
 		} catch (error) {
 			console.error('Error initializing map:', error);
-			return () => {};
+			return undefined;
 		}
 	});
 </script>
@@ -571,18 +604,7 @@
 			<Legend />
 			<div class="floating-panel absolute left-[3%] top-4 z-10 w-[94%] p-4 md:left-4 md:w-[400px]">
 				<SearchPanel onSearch={searchProjects} />
-				<div class="mt-3 text-[11px] leading-tight text-slate-500">
-					<p class="mb-0.5">
-						<strong>Note</strong> Project locations are approximate. Some projects are mapped to agency headquarters
-						or county/city centroids, which may result in overlapping points on the map.
-					</p>
-					<p class="mb-0.5">
-						<strong>Sources</strong> Biden White House / EPA / DOI / BIA / Jack Conness / Grist analysis
-					</p>
-					<p class="mb-0">
-						<strong>Development</strong> Clayton Aldern / Grist
-					</p>
-				</div>
+				<Credits />
 			</div>
 		</div>
 	</div>
