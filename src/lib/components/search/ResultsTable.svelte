@@ -18,18 +18,21 @@
 	const ROWS = 7;
 
 	let root: HTMLDivElement;
+	let scrollContainer: HTMLDivElement;
 	let array: Project[] = [];
 	let iterator: IterableIterator<Project>;
 	let n: number;
 	let sort = { col: '', desc: true };
+	let isHovering = false;
 
 	const cols = [
-		{ key: 'projectName', label: 'Project Name' },
-		{ key: 'agencyName', label: 'Agency' },
-		{ key: 'fundingSource', label: 'Funding Source' },
+		{ key: 'projectName', label: 'Project Name', width: '25%' },
+		{ key: 'agencyName', label: 'Agency', width: '15%' },
+		{ key: 'fundingSource', label: 'Funding Source', width: '10%' },
 		{
 			key: 'fundingAmount',
 			label: 'Amount',
+			width: '10%',
 			format: (value: unknown) => {
 				if (!value) return '';
 				const amount =
@@ -47,13 +50,14 @@
 				}).format(amount);
 			}
 		},
-		{ key: 'category', label: 'Program Category' },
-		{ key: 'subcategory', label: 'Program Subcategory' },
-		{ key: 'projectLocationType', label: 'Grantee Type' },
-		{ key: 'congressionalDistrict', label: 'Congressional District' },
+		{ key: 'category', label: 'Program Category', width: '10%' },
+		{ key: 'subcategory', label: 'Program Subcategory', width: '10%' },
+		{ key: 'projectLocationType', label: 'Grantee Type', width: '8%' },
+		{ key: 'congressionalDistrict', label: 'Congressional District', width: '7%' },
 		{
 			key: 'link',
 			label: 'Link',
+			width: '5%',
 			format: (value: unknown) => {
 				if (!value) return '';
 				return `<a href="${value}" target="_blank" class="text-emerald-600 hover:text-emerald-700 hover:underline">View details</a>`;
@@ -71,15 +75,17 @@
 		iterator = data[Symbol.iterator]();
 		n = minlengthof(ROWS * 2);
 		appendRows(0, n);
-		root?.scrollTo(root.scrollLeft, 0);
+		scrollContainer?.scrollTo(scrollContainer.scrollLeft, 0);
 	}
 
 	function appendRows(start: number, end: number) {
+		const newRows = [];
 		for (; start < end; start++) {
 			const { done, value } = iterator.next();
 			if (done) break;
-			array = [...array, value];
+			newRows.push(value);
 		}
+		array = [...array, ...newRows];
 	}
 
 	function resort(col: string) {
@@ -94,8 +100,39 @@
 	}
 
 	function onScroll() {
-		if (root.scrollHeight - root.scrollTop < ROWS * ROW_HEIGHT * 1.5 && n < minlengthof(n + 1)) {
-			appendRows(n, (n = minlengthof(n + ROWS)));
+		const threshold = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
+		if (threshold < ROW_HEIGHT * 2 && n < filteredResults.length) {
+			const nextN = minlengthof(n + ROWS);
+			if (nextN > n) {
+				appendRows(n, nextN);
+				n = nextN;
+			}
+		}
+	}
+
+	function handleWheel(event: WheelEvent) {
+		if (!isHovering) return;
+		
+		const container = scrollContainer;
+		const { deltaY, deltaX } = event;
+		const isScrollingUp = deltaY < 0;
+		const isScrollingDown = deltaY > 0;
+		
+		const isAtTop = container.scrollTop === 0;
+		const isAtBottom = container.scrollHeight - container.scrollTop === container.clientHeight;
+		
+		// Only prevent default if scrolling would go beyond bounds
+		if (
+			(isScrollingUp && !isAtTop) || 
+			(isScrollingDown && !isAtBottom) ||
+			deltaX !== 0
+		) {
+			event.preventDefault();
+			event.stopPropagation();
+			
+			// Manual scroll
+			container.scrollTop += deltaY;
+			container.scrollLeft += deltaX;
 		}
 	}
 
@@ -183,8 +220,12 @@
 		const handleDownload = () => downloadCurrentView();
 		window.addEventListener('downloadcsv', handleDownload);
 
+		// Add wheel event listener with passive: false to allow preventDefault
+		window.addEventListener('wheel', handleWheel, { passive: false });
+
 		return () => {
 			window.removeEventListener('downloadcsv', handleDownload);
+			window.removeEventListener('wheel', handleWheel);
 		};
 	});
 
@@ -225,7 +266,7 @@
 	}
 </script>
 
-<div class="h-full bg-slate-50/90 font-['Basis_Grotesque']">
+<div class="h-[600px] bg-slate-50/90 font-['Basis_Grotesque']">
 	{#if $isDataLoading}
 		<div class="absolute inset-0 flex items-center justify-center">
 			<div class="flex items-center gap-3">
@@ -245,60 +286,75 @@
 			</div>
 		</div>
 	{:else}
-		<div class="h-full overflow-x-auto overflow-y-auto" bind:this={root} on:scroll={onScroll}>
-			<table class="min-w-full table-auto border-collapse">
-				<thead class="sticky top-0 z-10">
-					<tr>
-						{#each cols as { key, label }}
-							<th
-								class="group relative border-b border-slate-200 bg-slate-100/95 p-2 text-left font-['PolySans'] text-xs font-medium shadow-sm backdrop-blur-sm transition-colors first:rounded-tl-lg last:rounded-tr-lg hover:cursor-pointer hover:bg-slate-200/95"
-								class:sort-desc={sort.col === key && sort.desc}
-								class:sort-asc={sort.col === key && !sort.desc}
-								on:click={resort(key)}
-							>
-								<span class="flex items-center gap-1 text-slate-700">
-									{label}
-									<svg
-										class="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100"
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-										/>
-									</svg>
-								</span>
-							</th>
-						{/each}
-					</tr>
-				</thead>
-				<tbody>
-					{#each array as row, i}
-						<tr
-							class="transition-colors hover:bg-emerald-50 {i % 2 === 0
-								? 'bg-white'
-								: 'bg-slate-50'}"
-						>
-							{#each cols as { key, format }}
-								<td class="whitespace-normal border-b border-slate-200 p-2 text-xs text-slate-600">
-									{#if key === 'link' && row[key]}
-										{@html format
-											? format(row[key as keyof Project])
-											: (row[key as keyof Project] ?? '')}
-									{:else}
-										{format ? format(row[key as keyof Project]) : (row[key as keyof Project] ?? '')}
-									{/if}
-								</td>
+		<div 
+			class="h-full overflow-hidden"
+			bind:this={root}
+		>
+			<div 
+				class="h-full overflow-auto overscroll-contain"
+				bind:this={scrollContainer}
+				on:scroll={onScroll}
+				on:mouseenter={() => (isHovering = true)}
+				on:mouseleave={() => (isHovering = false)}
+			>
+				<table class="min-w-full table-auto border-collapse">
+					<thead class="sticky top-0 z-10">
+						<tr>
+							{#each cols as { key, label, width }}
+								<th
+									class="group relative border-b border-slate-200 bg-slate-100/95 p-2 text-left font-['PolySans'] text-xs font-medium shadow-sm backdrop-blur-sm transition-colors first:rounded-tl-lg last:rounded-tr-lg hover:cursor-pointer hover:bg-slate-200/95"
+									class:sort-desc={sort.col === key && sort.desc}
+									class:sort-asc={sort.col === key && !sort.desc}
+									style="width: {width}"
+									on:click={resort(key)}
+								>
+									<span class="flex items-center gap-1 text-slate-700">
+										{label}
+										<svg
+											class="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+											/>
+										</svg>
+									</span>
+								</th>
 							{/each}
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each array as row, i}
+							<tr
+								class="transition-colors hover:bg-emerald-50 {i % 2 === 0
+									? 'bg-white'
+									: 'bg-slate-50'}"
+							>
+								{#each cols as { key, format, width }}
+									<td 
+										class="whitespace-normal border-b border-slate-200 p-2 text-xs text-slate-600"
+										style="width: {width}"
+									>
+										{#if key === 'link' && row[key]}
+											{@html format
+												? format(row[key as keyof Project])
+												: (row[key as keyof Project] ?? '')}
+										{:else}
+											{format ? format(row[key as keyof Project]) : (row[key as keyof Project] ?? '')}
+										{/if}
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	{/if}
 </div>
