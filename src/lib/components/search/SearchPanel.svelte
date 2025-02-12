@@ -194,10 +194,10 @@
 
 	<div class="relative z-10">
 		<h1 class="font-['PolySans'] text-3xl font-medium text-slate-800">
-			Meet Your Local Infrastructure Projects
+			Find Climate Spending Near You
 		</h1>
 		<p class="m-0 font-['Basis_Grotesque'] text-sm text-slate-600">
-			Find federal investments from the <span class="text-gold">Inflation Reduction Act</span> and
+			Look up federal investments from the <span class="text-gold">Inflation Reduction Act</span> and
 			the <span class="text-cobalt">Bipartisan Infrastructure Law</span> in your area using the control
 			panel below. You can search by ZIP code, city name, coordinates, or names of known locations.
 		</p>
