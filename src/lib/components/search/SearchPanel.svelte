@@ -194,7 +194,7 @@
 
 	<div class="relative z-10">
 		<h1 class="font-['PolySans'] text-3xl font-medium text-slate-800">
-			Meet Your Local Infrastructure Projects.
+			Meet Your Local Infrastructure Projects
 		</h1>
 		<p class="m-0 font-['Basis_Grotesque'] text-sm text-slate-600">
 			Find federal investments from the <span class="text-gold">Inflation Reduction Act</span> and
@@ -323,7 +323,7 @@
                   margin-top: {$searchResults.length > 0 ? '0.25rem' : '-10rem'};"
 			>
 				<div class="font-['Basis_Grotesque']">
-					<p class="m-0 text-xs text-slate-600 md:text-sm">
+					<p class="mt-0 mb-3 text-xs text-slate-600 md:text-sm">
 						Total funding across <span class="font-bold text-emerald-600"
 							>{filteredResults.length} project{filteredResults.length === 1 ? '' : 's'}</span
 						>
@@ -339,7 +339,7 @@
 							})()})
 						{/if}:
 					</p>
-					<p class="mb-1 mt-1 text-center font-['PolySans'] text-2xl font-medium text-emerald-600">
+					<p class="mb-3 mt-1 text-center font-['PolySans'] text-2xl font-medium text-emerald-600">
 						<span class:charging={isSpinning} class:charged={hasCharged}>
 							<span class="number-container">
 								<span class="currency-symbol">$</span>

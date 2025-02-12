@@ -94,7 +94,22 @@
 				col,
 				desc: sort.col === col ? !sort.desc : true
 			};
-			const d = orderBy(filteredResults, col, [sort.desc ? 'desc' : 'asc']);
+
+			const d = orderBy(
+				filteredResults,
+				[(item) => {
+					const value = item[col as keyof Project];
+					// For empty values, return a special value that will sort at the end
+					if (!value || value === '') return sort.desc ? '\uffff' : '';
+					// For amount, convert to number for proper sorting
+					if (col === 'fundingAmount') {
+						const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+						return isNaN(num) ? (sort.desc ? '\uffff' : '') : num;
+					}
+					return value;
+				}],
+				[sort.desc ? 'desc' : 'asc']
+			);
 			materialize(d);
 		};
 	}
@@ -200,14 +215,11 @@
 	});
 
 	$: {
+		const currentFilters = $activeFilters[$selectedColorMode];
 		if (filteredResults) {
 			materialize(filteredResults);
-			if (!$isDataLoading && ($hasSearched || $activeFilters[$selectedColorMode].size > 0)) {
-				if ($hasSearched) {
-					currentTableCount.set($searchResults.length);
-				} else {
-					currentTableCount.set(filteredResults.length);
-				}
+			if (!$isDataLoading) {
+				currentTableCount.set(filteredResults.length);
 			}
 		}
 	}
@@ -296,6 +308,8 @@
 				on:scroll={onScroll}
 				on:mouseenter={() => (isHovering = true)}
 				on:mouseleave={() => (isHovering = false)}
+				role="region"
+				aria-label="Scrollable results table"
 			>
 				<table class="min-w-full table-auto border-collapse">
 					<thead class="sticky top-0 z-10">
@@ -305,10 +319,11 @@
 									class="group relative border-b border-slate-200 bg-slate-100/95 p-2 text-left font-['PolySans'] text-xs font-medium shadow-sm backdrop-blur-sm transition-colors first:rounded-tl-lg last:rounded-tr-lg hover:cursor-pointer hover:bg-slate-200/95"
 									class:sort-desc={sort.col === key && sort.desc}
 									class:sort-asc={sort.col === key && !sort.desc}
+									class:text-right={key === 'fundingAmount'}
 									style="width: {width}"
 									on:click={resort(key)}
 								>
-									<span class="flex items-center gap-1 text-slate-700">
+									<span class="flex items-center gap-1 text-slate-700 {key === 'fundingAmount' ? 'justify-end' : ''}">
 										{label}
 										<svg
 											class="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100"
@@ -339,6 +354,7 @@
 								{#each cols as { key, format, width }}
 									<td 
 										class="whitespace-normal border-b border-slate-200 p-2 text-xs text-slate-600"
+										class:text-right={key === 'fundingAmount'}
 										style="width: {width}"
 									>
 										{#if key === 'link' && row[key]}
