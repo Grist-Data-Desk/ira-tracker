@@ -181,7 +181,7 @@
 }
 
 #map-root .maplibregl-ctrl.maplibregl-ctrl-group {
-	@apply m-0 mb-2 rounded border border-solid border-earth bg-smog/75 shadow backdrop-blur;
+	@apply m-0 mb-2 rounded border border-solid border-earth bg-smog shadow backdrop-blur;
 }
 
 #map-root .maplibregl-ctrl-geolocate,
@@ -192,7 +192,7 @@
 }
 
 #map-root .maplibregl-ctrl-top-right {
-	@apply right-[3%] top-4 flex flex-col items-end;
+	@apply bottom-[72px] right-[3%] top-auto flex flex-col items-end md:bottom-auto md:top-4;
 }
 
 #map-root .maplibregl-popup-tip {
@@ -200,7 +200,11 @@
 }
 
 #map-root .maplibregl-popup-content {
-	@apply rounded border border-solid border-earth !bg-smog bg-smog/75 p-2 shadow-md backdrop-blur;
+	@apply rounded border border-solid border-earth bg-smog p-2 shadow-md backdrop-blur;
+}
+
+#map-root .maplibregl-ctrl-bottom-right {
+	@apply bottom-[38px] z-20;
 }
 
 div.observer-pixel-14 {

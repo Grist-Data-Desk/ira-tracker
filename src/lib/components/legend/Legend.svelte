@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { selectedColorMode, activeFilters } from '$lib/stores';
-	import type { ColorMode } from '$lib/stores';
+	import { type ColorMode, selectedColorMode, activeFilters, legendOpen } from '$lib/stores';
 	import { COLORS, CATEGORIES } from '$lib/utils/constants';
 
 	const colorOrder = [
@@ -85,7 +84,10 @@
 </script>
 
 <div
-	class="floating-panel relative z-[15] bg-white px-2 pb-2 pt-0.5 shadow-lg"
+	class={[
+		'floating-panel absolute z-[15] bg-white px-2 pb-2 pt-0.5 shadow-lg md:bottom-auto md:left-auto md:right-[calc(3%+48px)] md:top-4 md:block',
+		$legendOpen ? 'bottom-[calc(40px+0.5rem)] left-[calc(3%+2.5rem)]' : 'hidden'
+	]}
 	style="min-width: {minPanelWidth}px"
 >
 	<div class="mb-0 flex items-center gap-1">

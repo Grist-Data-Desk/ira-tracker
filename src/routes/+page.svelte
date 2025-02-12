@@ -35,6 +35,7 @@
 	import { get } from 'svelte/store';
 	import type { ProjectFeatureCollection, Project } from '$lib/types';
 	import { writable } from 'svelte/store';
+	import ExpandLegend from '$lib/components/legend/ExpandLegend.svelte';
 
 	class ResetViewControl {
 		onAdd(map: maplibregl.Map) {
@@ -564,18 +565,16 @@
 
 <svelte:window bind:innerWidth />
 <main class="absolute inset-0 flex flex-col overflow-hidden font-['Basis_Grotesque']">
-	<div id="map-container" class="relative flex-1">
-		<div id="map-root"></div>
-		<div class="absolute right-[calc(3%+48px)] top-4">
-			<Legend />
-		</div>
+	<div id="map-container" class="relative">
+		<ExpandLegend />
+		<Legend />
 		<div class="floating-panel absolute left-[3%] top-4 z-10 w-[94%] p-4 md:left-4 md:w-[400px]">
 			<SearchPanel onSearch={searchProjects} />
 		</div>
 	</div>
 
 	<div
-		class="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white shadow-lg transition-all duration-300"
+		class="absolute bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white shadow-lg transition-all duration-300"
 		style="height: {$resultsExpanded ? '33vh' : '40px'}"
 	>
 		<div
@@ -630,7 +629,7 @@
 							window.dispatchEvent(event);
 						}
 					}}
-					class="flex h-8 items-center gap-1.5 whitespace-nowrap rounded px-2 text-xs text-slate-600 transition-colors hover:bg-slate-200/70 hover:text-slate-900"
+					class="flex h-8 items-center gap-1.5 whitespace-nowrap rounded border px-2 text-xs text-slate-600 transition-colors hover:bg-slate-200/70 hover:text-slate-900"
 				>
 					<svg
 						class="h-3.5 w-3.5 flex-shrink-0"

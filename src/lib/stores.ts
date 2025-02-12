@@ -24,3 +24,4 @@ export const activeFilters = writable<{ [key: string]: Set<string> }>({
 	fundingSource: new Set()
 });
 export const currentTableCount = writable(0);
+export const legendOpen = writable(false);
