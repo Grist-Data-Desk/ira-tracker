@@ -92,4 +92,4 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 
 ## Credits
 
-Development by [Clayton Aldern](https://github.com/clayton-aldern) for [Grist](https://grist.org). Project structure by [Parker Ziegler](https://github.com/parkerziegler). Results table component adapted from [cartokit](https://github.com/parkerziegler/cartokit).
+Development by [Clayton Aldern](https://github.com/clayton-aldern) for [Grist](https://grist.org). Project structure and additional development by [Parker Ziegler](https://github.com/parkerziegler). Results table component adapted from [cartokit](https://github.com/parkerziegler/cartokit).
