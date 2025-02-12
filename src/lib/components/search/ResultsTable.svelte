@@ -303,19 +303,6 @@
 	{/if}
 </div>
 
-<div
-	class="mt-4 border-t border-slate-200 border-opacity-25 pt-2 font-['Basis_Grotesque'] text-[11px] text-slate-500"
->
-	<p>
-		<strong>Note</strong> Project locations are approximate. Some projects are mapped to agency headquarters
-		or county/city centroids, which may result in overlapping points on the map.
-	</p>
-	<p>
-		<strong>Sources</strong> Biden White House / EPA / DOI / BIA / Jack Conness / Grist analysis
-	</p>
-	<p><strong>Development</strong> Clayton Aldern / Grist</p>
-</div>
-
 <style lang="postcss">
 	.sort-desc::after,
 	.sort-asc::after {

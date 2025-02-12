@@ -44,7 +44,7 @@
 			btn.innerHTML = '🔄';
 			btn.addEventListener('click', () => {
 				map.flyTo({
-					center: [-98.5795, 39.8283],
+					center: [-98.5795, isTabletOrAbove ? 39.8283 : 49],
 					zoom: isTabletOrAbove ? 4 : 3
 				});
 
@@ -434,7 +434,7 @@
 				container: 'map-container',
 				style: `${DO_SPACES_URL}/${STYLES_PATH}/map-style.json`,
 				// style: 'styles/map-style-local.json',
-				center: [-98.5795, 39.8283],
+				center: [-98.5795, isTabletOrAbove ? 39.8283 : 49],
 				zoom: isTabletOrAbove ? 4 : 3,
 				minZoom: 2,
 				attributionControl: false
@@ -565,17 +565,47 @@
 
 <svelte:window bind:innerWidth />
 <main class="absolute inset-0 flex flex-col overflow-hidden font-['Basis_Grotesque']">
-	<div id="map-container" class="relative">
-		<ExpandLegend />
-		<Legend />
-		<div class="floating-panel absolute left-[3%] top-4 z-10 w-[94%] p-4 md:left-4 md:w-[400px]">
-			<SearchPanel onSearch={searchProjects} />
+	<div class="relative flex-1" class:blur-sm={$resultsExpanded}>
+		<div id="map-container" class="relative h-full">
+			<ExpandLegend />
+			<Legend />
+			<div class="floating-panel absolute left-[3%] top-4 z-10 w-[94%] p-4 md:left-4 md:w-[400px]">
+				<SearchPanel onSearch={searchProjects} />
+				<div class="mt-3 text-[11px] leading-tight text-slate-500">
+					<p class="mb-0.5">
+						<strong>Note</strong> Project locations are approximate. Some projects are mapped to agency headquarters
+						or county/city centroids, which may result in overlapping points on the map.
+					</p>
+					<p class="mb-0.5">
+						<strong>Sources</strong> Biden White House / EPA / DOI / BIA / Jack Conness / Grist analysis
+					</p>
+					<p class="mb-0">
+						<strong>Development</strong> Clayton Aldern / Grist
+					</p>
+				</div>
+			</div>
 		</div>
 	</div>
 
+	{#if $resultsExpanded}
+		<div 
+			class="absolute inset-0 z-10 bg-black/5 backdrop-blur-[2px] transition-opacity duration-300"
+			on:click={() => resultsExpanded.set(false)}
+			on:keydown={(e) => {
+				if (e.key === 'Enter' || e.key === 'Space') {
+					e.preventDefault();
+					resultsExpanded.set(false);
+				}
+			}}
+			role="button"
+			tabindex="0"
+			aria-label="Close results table"
+		></div>
+	{/if}
+
 	<div
 		class="absolute bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white shadow-lg transition-all duration-300"
-		style="height: {$resultsExpanded ? '33vh' : '40px'}"
+		style="height: {$resultsExpanded ? '66vh' : '40px'}"
 	>
 		<div
 			class="absolute inset-x-0 top-0 flex h-10 items-center justify-between border-b border-slate-200 bg-slate-50 px-4"
