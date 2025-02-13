@@ -11,10 +11,10 @@
 		<div class="text-[11px] leading-tight text-slate-500">
 			<p class="mb-0.5">
 				<strong>Note</strong> Project locations are approximate. Some projects are mapped to agency headquarters
-				or county/city centroids, which may result in overlapping points on the map.
+				or county/city centroids, which may result in overlapping points on the map. Others may be jittered in source data.
 			</p>
 			<p class="mb-0.5">
-				<strong>Sources</strong> Biden White House / EPA / DOI / BIA / Jack Conness / Grist analysis
+				<strong>Sources</strong> Biden White House / EPA / DOI / DOE / BIA / NOAA / USBR / Grist analysis
 			</p>
 			<p class="mb-0">
 				<strong>Development</strong> Clayton Aldern / Parker Ziegler / Grist. See our <a href="https://github.com/Grist-Data-Desk/ira-tracker" target="_blank">methods</a>.

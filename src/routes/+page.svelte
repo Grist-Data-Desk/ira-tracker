@@ -509,14 +509,14 @@
 					if (!map.getLayer(LAYER_CONFIG.reservationLabels.id)) {
 						map.addLayer(LAYER_CONFIG.reservationLabels);
 					}
-					if (!map.getLayer(LAYER_CONFIG.whProjectsPoints.id)) {
-						map.addLayer(LAYER_CONFIG.whProjectsPoints);
+					if (!map.getLayer(LAYER_CONFIG.projectsPoints.id)) {
+						map.addLayer(LAYER_CONFIG.projectsPoints);
 					}
 				} catch (error) {
 					console.error('Error adding layers:', error);
 				}
 
-				map.on('click', LAYER_CONFIG.whProjectsPoints.id, (e) => {
+				map.on('click', LAYER_CONFIG.projectsPoints.id, (e) => {
 					if (!e.features?.length) return;
 
 					const featuresByLocation = e.features.reduce(
@@ -551,7 +551,7 @@
 					);
 				});
 
-				map.setPaintProperty(LAYER_CONFIG.whProjectsPoints.id, 'circle-radius', [
+				map.setPaintProperty(LAYER_CONFIG.projectsPoints.id, 'circle-radius', [
 					'interpolate',
 					['linear'],
 					['zoom'],
@@ -561,11 +561,11 @@
 					5
 				]);
 
-				map.on('mouseenter', LAYER_CONFIG.whProjectsPoints.id, () => {
+				map.on('mouseenter', LAYER_CONFIG.projectsPoints.id, () => {
 					map.getCanvas().style.cursor = 'pointer';
 				});
 
-				map.on('mouseleave', LAYER_CONFIG.whProjectsPoints.id, () => {
+				map.on('mouseleave', LAYER_CONFIG.projectsPoints.id, () => {
 					map.getCanvas().style.cursor = '';
 				});
 

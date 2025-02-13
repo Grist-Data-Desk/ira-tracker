@@ -198,7 +198,7 @@
 		</h1>
 		<p class="m-0 font-['Basis_Grotesque'] text-sm text-slate-600">
 			Look up federal investments from the <span class="text-orange">Inflation Reduction Act</span> and
-			the <span class="text-cobalt">Bipartisan Infrastructure Law</span> in your area using the control
+			the <span class="text-cobalt">bipartisan infrastructure law</span> in your area using the control
 			panel below. You can search by ZIP code, city name, coordinates, or names of known locations.
 		</p>
 	</div>

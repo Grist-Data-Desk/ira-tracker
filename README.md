@@ -1,6 +1,6 @@
 # IRA/BIL Project Map
 
-Grist's interactive web application for visualizing Inflation Reduction Act (IRA) and Bipartisan Infrastructure Law (BIL) projects across the United States. Built with SvelteKit and MapLibre GL.
+Grist's interactive web application for visualizing Inflation Reduction Act (IRA) and bipartisan infrastructure law (BIL) projects across the United States. Built with SvelteKit and MapLibre GL. [View the live map here.](https://grist.org/accountability/climate-infrastructure-ira-bil-map-tool/)
 
 ## Features
 
@@ -80,15 +80,21 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 ## Project Structure
 
 - `/src` - Application source code
-  - `/routes` - SvelteKit routes
+  - `/routes` - SvelteKit routes, including main map page
   - `/lib` - Shared components and utilities
     - `/components` - Reusable UI components
+      - `/credits` - Credit and note components
       - `/search` - Search-related components
       - `/legend` - Map legend components
     - `/types` - TypeScript type definitions
     - `/utils` - Utility functions, constants, and configuration
 - `/scripts` - Data processing and deployment scripts
-- `/static` - Static assets
+  - `/src` - TypeScript source code for data processing
+  - `/data` - Data files
+    - `/raw` - Input data files (CSV, raw GeoJSON)
+    - `/processed` - Generated files (PMTiles, compressed GeoJSON)
+  - `/styles` - Map style configuration
+- `/static` - Static assets (favicon, etc.)
 
 ## Credits
 

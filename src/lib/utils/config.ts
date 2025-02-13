@@ -37,7 +37,7 @@ const CATEGORIES = {
 };
 
 export const SOURCE_CONFIG: Record<string, { id: string; config: SourceSpecification }> = {
-	whProjects: {
+	projects: {
 		id: 'projects',
 		config: {
 			type: 'vector',
@@ -65,7 +65,7 @@ function createColorExpression(field: string, categories: string[]) {
 		'match',
 		['get', field],
 		...categories.map((name, i) => [name, colorOrder[i]]).flat(),
-		COLORS.EARTH // Default color for any value not in categories
+		COLORS.EARTH
 	] as any;
 }
 
@@ -78,7 +78,7 @@ export function getCurrentColorExpressions() {
 }
 
 export const LAYER_CONFIG: Record<string, AddLayerObject> = {
-	whProjectsPoints: {
+	projectsPoints: {
 		id: 'projects-points',
 		source: 'projects',
 		type: 'circle',
