@@ -7,7 +7,9 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"build:cdn": "USE_CDN=true vite build",
 		"preview": "vite preview",
+		"preview:cdn": "USE_CDN=true vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
@@ -19,7 +21,7 @@
 		"upload:styles": "tsx scripts/src/upload-styles.ts",
 		"process-all": "pnpm gen:geojson && pnpm gen:pmtiles && pnpm upload:geojson && pnpm upload:pmtiles && pnpm upload:styles",
 		"publish:app": "tsx scripts/src/deploy.ts",
-		"build-and-publish": "pnpm build && pnpm publish:app"
+		"build-and-publish": "USE_CDN=true node -r esbuild-register scripts/src/deploy.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

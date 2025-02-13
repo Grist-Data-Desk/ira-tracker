@@ -19,7 +19,9 @@ const config = {
 			strict: true
 		}),
 		paths: {
-			assets: 'https://grist.nyc3.cdn.digitaloceanspaces.com/ira-bil/interactives/ira-bil-map'
+			assets: process.env.USE_CDN === 'true'
+				? 'https://grist.nyc3.cdn.digitaloceanspaces.com/ira-bil/interactives/ira-bil-map'
+				: ''
 		}
 	}
 };
