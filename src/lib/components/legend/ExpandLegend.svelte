@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { legendOpen } from '$lib/stores';
+	import { uiState } from '$lib/stores';
 
 	function onClick() {
-		legendOpen.update((value) => !value);
+		uiState.update(state => ({ ...state, legendExpanded: !state.legendExpanded }));
 	}
 </script>
 

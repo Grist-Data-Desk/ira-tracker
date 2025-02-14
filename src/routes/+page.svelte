@@ -1,17 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import {
-		searchResults,
-		searchQuery,
-		searchRadius,
-		allPoints,
-		selectedColorMode,
-		isSearching,
-		isDataLoading,
-		hasSearched,
-		activeFilters,
-		currentTableCount,
-		creditsExpanded
+		dataStore,
+		searchState,
+		visualState,
+		uiState,
+		currentCount,
+		isDataLoading
 	} from '$lib/stores';
 	import { TABLET_BREAKPOINT, CATEGORIES } from '$lib/utils/constants';
 	import maplibregl from 'maplibre-gl';
@@ -33,9 +28,7 @@
 		STYLES_PATH,
 		getCurrentColorExpressions
 	} from '$lib/utils/config';
-	import { get } from 'svelte/store';
 	import type { ProjectFeatureCollection, Project } from '$lib/types';
-	import { writable } from 'svelte/store';
 	import ExpandLegend from '$lib/components/legend/ExpandLegend.svelte';
 	import Credits from '$lib/components/credits/Credits.svelte';
 
@@ -45,6 +38,7 @@
 	let currentPopup: maplibregl.Popup | null = null;
 	let pmtilesInstance: pmtiles.PMTiles;
 	let geolocateControl: maplibregl.GeolocateControl | null = null;
+	let searchResultsLayer = 'search-results-points';
 
 	$: isTabletOrAbove = innerWidth > TABLET_BREAKPOINT;
 
@@ -67,30 +61,23 @@
 					zoom: isTabletOrAbove ? 4 : 3
 				});
 
-				searchQuery.set('');
-				searchResults.set([]);
-				hasSearched.set(false);
-
-				selectedColorMode.set('fundingSource');
-				activeFilters.update((filters) => {
-					Object.keys(filters).forEach((key) => {
-						filters[key].clear();
-					});
-					return filters;
+				searchState.set({
+					query: '',
+					radius: 50,
+					isSearching: false,
+					results: []
 				});
 
-				if (map?.getLayer('search-radius-outline')) {
-					map.removeLayer('search-radius-outline');
-				}
-				if (map?.getLayer('search-radius-layer')) {
-					map.removeLayer('search-radius-layer');
-				}
-				if (map?.getSource('search-radius')) {
-					map.removeSource('search-radius');
-				}
+				visualState.set({
+					colorMode: 'fundingSource',
+					filters: new Set()
+				});
+
+				cleanupSearchLayers();
 
 				if (map?.getLayer('projects-points')) {
 					map.setFilter('projects-points', null);
+					map.setLayoutProperty('projects-points', 'visibility', 'visible');
 				}
 
 				if (currentPopup) {
@@ -109,6 +96,15 @@
 	function cleanupSearchLayers() {
 		if (!map) return;
 
+		if (map.getLayer(searchResultsLayer)) {
+			map.off('click', searchResultsLayer, handleSearchResultClick);
+			map.off('mouseenter', searchResultsLayer, handleSearchResultMouseEnter);
+			map.off('mouseleave', searchResultsLayer, handleSearchResultMouseLeave);
+			map.removeLayer(searchResultsLayer);
+		}
+		if (map.getSource(searchResultsLayer)) {
+			map.removeSource(searchResultsLayer);
+		}
 		if (map.getLayer('search-radius-outline')) {
 			map.removeLayer('search-radius-outline');
 		}
@@ -118,11 +114,58 @@
 		if (map.getSource('search-radius')) {
 			map.removeSource('search-radius');
 		}
+
+		if (map.getLayer(LAYER_CONFIG.projectsPoints.id)) {
+			map.setLayoutProperty(LAYER_CONFIG.projectsPoints.id, 'visibility', 'visible');
+		}
+	}
+
+	function handleSearchResultClick(e: maplibregl.MapMouseEvent & { features?: any[] }) {
+		if (!e.features?.length || !map) return;
+
+		const featuresByLocation = e.features.reduce(
+			(acc: { [key: string]: any[] }, feature: any) => {
+				if (!feature.geometry || feature.geometry.type !== 'Point') return acc;
+				const coords = (feature.geometry as { type: 'Point'; coordinates: [number, number] })
+					.coordinates;
+				const key = `${coords[0]},${coords[1]}`;
+				if (!acc[key]) acc[key] = [];
+				acc[key].push(feature);
+				return acc;
+			},
+			{}
+		);
+
+		const coordinates = (
+			e.features[0].geometry as { type: 'Point'; coordinates: [number, number] }
+		).coordinates;
+		const key = `${coordinates[0]},${coordinates[1]}`;
+		const locationFeatures = featuresByLocation[key];
+
+		const projects: Project[] = locationFeatures.map(featureToProject);
+
+		if (currentPopup) {
+			currentPopup.remove();
+		}
+
+		const projectPopup = new ProjectPopup(map, projects);
+		currentPopup = projectPopup.showPopup(
+			new maplibregl.LngLat(coordinates[0], coordinates[1]),
+			projects
+		);
+	}
+
+	function handleSearchResultMouseEnter() {
+		if (map) map.getCanvas().style.cursor = 'pointer';
+	}
+
+	function handleSearchResultMouseLeave() {
+		if (map) map.getCanvas().style.cursor = '';
 	}
 
 	async function loadGeoJSONData() {
 		try {
-			isDataLoading.set(true);
+			dataStore.update(state => ({ ...state, isLoading: true }));
 			const response = await fetch(`${DO_SPACES_URL}/${GEOJSON_PATH}/projects.geojson.br`);
 			if (!response.ok) throw new Error('Failed to load GeoJSON data');
 
@@ -134,7 +177,6 @@
 			let data;
 			try {
 				data = JSON.parse(decompressed) as ProjectFeatureCollection;
-				currentTableCount.set(data.features.length);
 			} catch (e) {
 				console.error('Failed to parse JSON:', e);
 				throw new Error('Failed to parse decompressed data as JSON');
@@ -163,35 +205,38 @@
 
 			index.finish();
 
-			allPoints.set({
-				collection: data,
-				index
-			});
+			dataStore.update(state => ({
+				...state,
+				isLoading: false,
+				collection: {
+					collection: data,
+					index
+				}
+			}));
 		} catch (error) {
 			console.error('Error loading GeoJSON data:', error);
-		} finally {
-			isDataLoading.set(false);
+			dataStore.update(state => ({ ...state, isLoading: false }));
 		}
 	}
 
 	function updateMapFilters() {
 		if (!map) return;
 
-		const currentMode = $selectedColorMode;
-		const currentFilters = $activeFilters[currentMode];
+		const currentMode = $visualState.colorMode;
+		const currentFilters = $visualState.filters;
 
 		const expressions = getCurrentColorExpressions();
+		
 		map.setPaintProperty('projects-points', 'circle-color', expressions[currentMode]);
-
-		const filters: any[] = [];
-
-		if ($hasSearched && map.getSource('search-radius')) {
-			filters.push(['in', 'UID', ...Array.from($searchResults.map((p) => p.uid))]);
+		if (map.getLayer(searchResultsLayer)) {
+			map.setPaintProperty(searchResultsLayer, 'circle-color', expressions[currentMode]);
 		}
 
+		const filters: any[] = [];
 		if (currentFilters.size > 0) {
 			let filterField;
 			let mainCategories: string[];
+			
 			switch (currentMode) {
 				case 'agency':
 					filterField = 'Agency Name';
@@ -207,32 +252,204 @@
 					break;
 			}
 
-			if (currentFilters.has('Other')) {
-				const selectedMainCategories = Array.from(currentFilters).filter((f) => f !== 'Other');
-
-				if (selectedMainCategories.length > 0) {
+			const hasOther = currentFilters.has('Other');
+			const mainCategoryFilters = Array.from(currentFilters).filter(f => mainCategories.includes(f));
+			
+			if (hasOther) {
+				if (mainCategoryFilters.length > 0) {
 					filters.push([
 						'any',
-						['!in', filterField, ...mainCategories],
-						['in', filterField, ...selectedMainCategories]
+						['!in', filterField, ...mainCategories], // Other
+						['in', filterField, ...mainCategoryFilters] // Selected main categories
 					]);
 				} else {
 					filters.push(['!in', filterField, ...mainCategories]);
 				}
-			} else {
-				filters.push(['in', filterField, ...Array.from(currentFilters)]);
+			} else if (mainCategoryFilters.length > 0) {
+				filters.push(['in', filterField, ...mainCategoryFilters]);
 			}
 		}
 
-		const finalFilter =
-			filters.length > 0 ? (filters.length > 1 ? ['all', ...filters] : filters[0]) : undefined;
+		const finalFilter = filters.length > 0 
+			? (filters.length > 1 ? ['all', ...filters] : filters[0]) 
+			: null;
 
-		map.setFilter('projects-points', finalFilter);
+		if (map.getLayoutProperty('projects-points', 'visibility') === 'visible') {
+			map.setFilter('projects-points', finalFilter);
+		}
+
+		if (map.getLayer(searchResultsLayer)) {
+			map.setFilter(searchResultsLayer, finalFilter);
+		}
 	}
 
-	$: {
-		if (browser && map) {
-			updateMapFilters();
+	$: if (browser && map && $visualState) {
+		updateMapFilters();
+	}
+
+	async function searchProjects() {
+		searchState.update(state => ({ ...state, isSearching: true }));
+		uiState.update(state => ({ ...state, creditsExpanded: false }));
+
+		if (geolocateControl) {
+			geolocateControl._watchState = 'OFF';
+			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
+			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
+			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
+			geolocateControl._clearWatch();
+		}
+
+		try {
+			let lat: number;
+			let lon: number;
+
+			const latLonRe = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
+			if (latLonRe.test($searchState.query)) {
+				[lat, lon] = $searchState.query
+					.split(',')
+					.map((coord: string) => parseFloat(coord.trim()));
+
+				if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+					throw new Error('Invalid coordinates');
+				}
+			} else {
+				const response = await fetch(
+					`https://nominatim.openstreetmap.org/search?format=geojson&q=${encodeURIComponent($searchState.query)}&addressdetails=1&limit=1&countrycodes=us`
+				);
+				const data = await response.json();
+
+				if (!data.features || data.features.length === 0) {
+					throw new Error('Location not found');
+				}
+
+				const feature = data.features[0];
+				[lon, lat] = feature.geometry.coordinates;
+			}
+
+			if (currentPopup) {
+				currentPopup.remove();
+				currentPopup = null;
+			}
+
+			cleanupSearchLayers();
+
+			const searchCenter = turf.point([lon, lat]);
+			const searchArea = turf.circle(searchCenter, $searchState.radius, { steps: 64, units: 'miles' });
+
+			map?.addSource('search-radius', {
+				type: 'geojson',
+				data: searchArea
+			});
+
+			map?.addLayer({
+				id: 'search-radius-layer',
+				type: 'fill',
+				source: 'search-radius',
+				paint: {
+					'fill-color': '#3c3830',
+					'fill-opacity': 0.1
+				}
+			});
+
+			map?.addLayer({
+				id: 'search-radius-outline',
+				type: 'line',
+				source: 'search-radius',
+				paint: {
+					'line-color': '#3c3830',
+					'line-width': 2,
+					'line-dasharray': [4, 2]
+				}
+			});
+
+			const $data = $dataStore;
+			if ($data.collection.index) {
+				const searchRadiusInKm = $searchState.radius * 1.60934;
+				const latKm = 110.574;
+				const lonKm = 111.32 * Math.cos((lat * Math.PI) / 180);
+
+				const latDelta = searchRadiusInKm / latKm;
+				const lonDelta = searchRadiusInKm / lonKm;
+
+				const pointIndices = $data.collection.index.range(
+					lon - lonDelta,
+					lat - latDelta,
+					lon + lonDelta,
+					lat + latDelta
+				);
+
+				const nearbyFeatures = pointIndices
+					.map((i: number) => $data.collection.collection.features[i])
+					.filter((feature: Feature<Point>) => {
+						const distance = turf.distance(
+							turf.point(feature.geometry.coordinates),
+							turf.point([lon, lat]),
+							{ units: 'miles' }
+						);
+						return distance <= $searchState.radius;
+					});
+
+				const projects: Project[] = nearbyFeatures.map(featureToProject);
+
+				searchState.update(state => ({ ...state, results: projects }));
+
+				if (map?.getLayer(LAYER_CONFIG.projectsPoints.id)) {
+					map.setLayoutProperty(LAYER_CONFIG.projectsPoints.id, 'visibility', 'none');
+				}
+
+				const searchResultsGeoJSON: GeoJSON.FeatureCollection<Point> = {
+					type: 'FeatureCollection',
+					features: nearbyFeatures
+				};
+
+				if (map) {
+					map.addSource(searchResultsLayer, {
+						type: 'geojson',
+						data: searchResultsGeoJSON
+					});
+
+					const currentMode = $visualState.colorMode;
+					const expressions = getCurrentColorExpressions();
+
+					map.addLayer({
+						id: searchResultsLayer,
+						type: 'circle',
+						source: searchResultsLayer,
+						paint: {
+							'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 3, 8, 5],
+							'circle-color': expressions[currentMode],
+							'circle-stroke-width': 2,
+							'circle-stroke-color': '#ffffff',
+							'circle-opacity': 0.7
+						}
+					});
+
+					updateMapFilters();
+
+					map.on('click', searchResultsLayer, handleSearchResultClick);
+					map.on('mouseenter', searchResultsLayer, handleSearchResultMouseEnter);
+					map.on('mouseleave', searchResultsLayer, handleSearchResultMouseLeave);
+
+					const bounds = new maplibregl.LngLatBounds();
+					const coords = searchArea.geometry.coordinates[0] as Array<[number, number]>;
+					coords.forEach((coord) => bounds.extend(coord));
+
+					map?.fitBounds(bounds, {
+						padding: {
+							top: isTabletOrAbove ? 50 : 425,
+							bottom: 50,
+							left: isTabletOrAbove ? 450 : 50,
+							right: 50
+						},
+						duration: 1000
+					});
+				}
+			}
+		} catch (error) {
+			console.error('Search error:', error);
+			searchState.update(state => ({ ...state, results: [] }));
+		} finally {
+			searchState.update(state => ({ ...state, isSearching: false }));
 		}
 	}
 
@@ -264,177 +481,6 @@
 			longitude: coords[0]
 		};
 	};
-
-	async function searchProjects() {
-		isSearching.set(true);
-		hasSearched.set(true);
-		creditsExpanded.set(false);
-
-		if (geolocateControl) {
-			geolocateControl._watchState = 'OFF';
-			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
-			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
-			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
-			geolocateControl._clearWatch();
-		}
-
-		try {
-			let lat: number;
-			let lon: number;
-
-			const latLonRe = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
-			if (latLonRe.test(get(searchQuery))) {
-				[lat, lon] = get(searchQuery)
-					.split(',')
-					.map((coord: string) => parseFloat(coord.trim()));
-
-				if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-					throw new Error('Invalid coordinates');
-				}
-			} else {
-				const response = await fetch(
-					`https://nominatim.openstreetmap.org/search?format=geojson&q=${encodeURIComponent(get(searchQuery))}&addressdetails=1&limit=1&countrycodes=us`
-				);
-				const data = await response.json();
-
-				if (!data.features || data.features.length === 0) {
-					throw new Error('Location not found');
-				}
-
-				const feature = data.features[0];
-				[lon, lat] = feature.geometry.coordinates;
-			}
-
-			if (currentPopup) {
-				currentPopup.remove();
-				currentPopup = null;
-			}
-
-			cleanupSearchLayers();
-
-			const searchCenter = turf.point([lon, lat]);
-			const searchArea = turf.circle(searchCenter, $searchRadius, { steps: 64, units: 'miles' });
-
-			map?.addSource('search-radius', {
-				type: 'geojson',
-				data: searchArea
-			});
-
-			map?.addLayer({
-				id: 'search-radius-layer',
-				type: 'fill',
-				source: 'search-radius',
-				paint: {
-					'fill-color': '#3c3830',
-					'fill-opacity': 0.1
-				}
-			});
-
-			map?.addLayer({
-				id: 'search-radius-outline',
-				type: 'line',
-				source: 'search-radius',
-				paint: {
-					'line-color': '#3c3830',
-					'line-width': 2,
-					'line-dasharray': [4, 2]
-				}
-			});
-
-			const $points = get(allPoints);
-			if ($points.index) {
-				const searchRadiusInKm = $searchRadius * 1.60934;
-				const latKm = 110.574;
-				const lonKm = 111.32 * Math.cos((lat * Math.PI) / 180);
-
-				const latDelta = searchRadiusInKm / latKm;
-				const lonDelta = searchRadiusInKm / lonKm;
-
-				const pointIndices = $points.index.range(
-					lon - lonDelta,
-					lat - latDelta,
-					lon + lonDelta,
-					lat + latDelta
-				);
-
-				const nearbyFeatures = pointIndices
-					.map((i: number) => $points.collection.features[i])
-					.filter((feature: Feature<Point>) => {
-						const distance = turf.distance(
-							turf.point(feature.geometry.coordinates),
-							turf.point([lon, lat]),
-							{ units: 'miles' }
-						);
-						return distance <= $searchRadius;
-					});
-
-				const projects: Project[] = nearbyFeatures.map(featureToProject);
-
-				searchResults.set(projects);
-				currentTableCount.set(projects.length);
-
-				updateMapFilters();
-
-				const bounds = new maplibregl.LngLatBounds();
-				const coords = searchArea.geometry.coordinates[0] as Array<[number, number]>;
-				coords.forEach((coord) => bounds.extend(coord));
-
-				map?.fitBounds(bounds, {
-					padding: {
-						top: isTabletOrAbove ? 50 : 425,
-						bottom: 50,
-						left: isTabletOrAbove ? 450 : 50,
-						right: 50
-					},
-					duration: 1000
-				});
-			}
-		} catch (error) {
-			console.error('Search error:', error);
-			searchResults.set([]);
-			currentTableCount.set($allPoints.collection?.features.length ?? 0);
-		} finally {
-			isSearching.set(false);
-		}
-	}
-
-	const resultsExpanded = writable(false);
-
-	$: filteredResults = (
-		$hasSearched ? $searchResults : $allPoints.collection?.features.map(featureToProject) || []
-	).filter((project) => {
-		const currentMode = $selectedColorMode;
-		const currentFilters = $activeFilters[currentMode];
-
-		if (currentFilters.size === 0) return true;
-
-		let fieldValue = '';
-		switch (currentMode) {
-			case 'agency':
-				fieldValue = project.agencyName;
-				break;
-			case 'category':
-				fieldValue = project.category;
-				break;
-			case 'fundingSource':
-				fieldValue = project.fundingSource;
-				break;
-		}
-
-		const isInMainCategories = currentFilters.has(fieldValue);
-		const mainCategories =
-			currentMode === 'agency'
-				? CATEGORIES.agency
-				: currentMode === 'category'
-					? CATEGORIES.category
-					: CATEGORIES.fundingSource;
-
-		const isOther = !mainCategories.includes(fieldValue);
-
-		return isInMainCategories || (currentFilters.has('Other') && isOther);
-	});
-
-	$: currentTableCount.set(filteredResults.length);
 
 	onMount(async () => {
 		browser = true;
@@ -472,11 +518,13 @@
 			geolocateControl.on('geolocate', (position) => {
 				const lat = position.coords.latitude;
 				const lon = position.coords.longitude;
-				searchQuery.set(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+				searchState.update(state => ({
+					...state,
+					query: `${lat.toFixed(4)}, ${lon.toFixed(4)}`
+				}));
 				searchProjects();
 			});
 
-			// Handle error state cleanup
 			geolocateControl.on('error', () => {
 				if (geolocateControl) {
 					geolocateControl._watchState = 'OFF';
@@ -577,28 +625,20 @@
 				}
 			});
 
-			const unsubscribe = activeFilters.subscribe(() => {
-				if (map) {
-					updateMapFilters();
-				}
-			});
-
 			return () => {
-				unsubscribe();
 				if (map) {
 					map.remove();
 				}
 			};
 		} catch (error) {
 			console.error('Error initializing map:', error);
-			return undefined;
 		}
 	});
 </script>
 
 <svelte:window bind:innerWidth />
 <main class="absolute inset-0 flex flex-col overflow-hidden font-['Basis_Grotesque']">
-	<div class="relative flex-1" class:blur-sm={$resultsExpanded}>
+	<div class="relative flex-1" class:blur-sm={$uiState.resultsExpanded}>
 		<div id="map-container" class="relative h-full">
 			<ExpandLegend />
 			<Legend />
@@ -609,14 +649,14 @@
 		</div>
 	</div>
 
-	{#if $resultsExpanded}
+	{#if $uiState.resultsExpanded}
 		<div 
 			class="absolute inset-0 z-10 bg-black/5 backdrop-blur-[2px] transition-opacity duration-300"
-			on:click={() => resultsExpanded.set(false)}
+			on:click={() => uiState.update(state => ({ ...state, resultsExpanded: false }))}
 			on:keydown={(e) => {
 				if (e.key === 'Enter' || e.key === 'Space') {
 					e.preventDefault();
-					resultsExpanded.set(false);
+					uiState.update(state => ({ ...state, resultsExpanded: false }));
 				}
 			}}
 			role="button"
@@ -627,7 +667,7 @@
 
 	<div
 		class="absolute bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white shadow-lg transition-all duration-300"
-		style="height: {$resultsExpanded ? '66vh' : '40px'}"
+		style="height: {$uiState.resultsExpanded ? '66vh' : '40px'}"
 	>
 		<div
 			class="absolute inset-x-0 top-0 flex h-10 items-center justify-between border-b border-slate-200 bg-slate-50 px-4"
@@ -635,19 +675,19 @@
 			<button
 				type="button"
 				class="flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent p-0 text-left transition-colors hover:text-slate-700"
-				on:click={() => resultsExpanded.update((v) => !v)}
+				on:click={() => uiState.update(state => ({ ...state, resultsExpanded: !state.resultsExpanded }))}
 				on:keydown={(e) => {
 					if (e.key === 'Enter' || e.key === ' ') {
 						e.preventDefault();
-						resultsExpanded.update((v) => !v);
+						uiState.update(state => ({ ...state, resultsExpanded: !state.resultsExpanded }));
 					}
 				}}
-				aria-expanded={$resultsExpanded}
+				aria-expanded={$uiState.resultsExpanded}
 				aria-controls="results-table-container"
 			>
 				<svg
 					class="h-4 w-4 transition-transform duration-300"
-					style="transform: rotate({$resultsExpanded ? '0deg' : '180deg'})"
+					style="transform: rotate({$uiState.resultsExpanded ? '0deg' : '180deg'})"
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 24 24"
 					fill="none"
@@ -665,18 +705,18 @@
 				<span class="text-sm text-slate-500">
 					{#if $isDataLoading}
 						(Loading...)
-					{:else if $isSearching}
+					{:else if $searchState.isSearching}
 						(Searching...)
 					{:else}
-						({$currentTableCount} projects)
+						({$currentCount} projects)
 					{/if}
 				</span>
 			</button>
-			{#if $resultsExpanded}
+			{#if $uiState.resultsExpanded}
 				<button
 					type="button"
 					on:click|stopPropagation={() => {
-						if ($resultsExpanded) {
+						if ($uiState.resultsExpanded) {
 							const event = new CustomEvent('downloadcsv');
 							window.dispatchEvent(event);
 						}
@@ -703,7 +743,7 @@
 			{/if}
 		</div>
 
-		{#if $resultsExpanded}
+		{#if $uiState.resultsExpanded}
 			<div id="results-table-container" class="absolute inset-0 top-10 overflow-hidden">
 				<ResultsTable />
 			</div>

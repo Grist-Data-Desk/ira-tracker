@@ -45,14 +45,16 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 
 - `pnpm dev` - Start development server
 - `pnpm build` - Build for production
+- `pnpm build:cdn` - Build for production using CDN assets
 - `pnpm preview` - Preview production build
+- `pnpm preview:cdn` - Preview production build using CDN assets
 
 ### Code Quality
 
 - `pnpm check` - Run TypeScript checks
 - `pnpm check:watch` - Run TypeScript checks in watch mode
 - `pnpm format` - Format code with Prettier
-- `pnpm lint` - Run linting checks
+- `pnpm lint` - Run linting checks and Prettier verification
 
 ### Data Processing Pipeline
 
@@ -66,7 +68,7 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 ### Deployment
 
 - `pnpm publish:app` - Deploy the application
-- `pnpm build-and-publish` - Build and deploy in one step
+- `pnpm build-and-publish` - Build with CDN configuration and deploy in one step
 
 ## Technology Stack
 
@@ -75,7 +77,9 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
 - [PMTiles](https://github.com/protomaps/PMTiles) - Efficient tile storage format
 - [TailwindCSS](https://tailwindcss.com/) - Styling
 - [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Digital Ocean Spaces](https://www.digitalocean.com/products/spaces) - Data storage
+- [Digital Ocean Spaces](https://www.digitalocean.com/products/spaces) - Data storage and CDN
+- [Turf.js](https://turfjs.org/) - Geospatial analysis
+- [KDBush](https://github.com/mourner/kdbush) - Spatial indexing
 
 ## Project Structure
 

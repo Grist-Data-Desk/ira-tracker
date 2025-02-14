@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { creditsExpanded } from '$lib/stores';
+	import { uiState } from '$lib/stores';
 
 	function toggleCredits() {
-		creditsExpanded.update((v) => !v);
+		uiState.update(state => ({ ...state, creditsExpanded: !state.creditsExpanded }));
 	}
 </script>
 
 <div class="relative">
-	{#if $creditsExpanded}
+	{#if $uiState.creditsExpanded}
 		<div class="text-[11px] leading-tight text-slate-500">
 			<p class="mb-0.5">
 				<strong>Note</strong> Project locations are approximate. Some projects are mapped to agency headquarters
@@ -28,11 +28,11 @@
 			type="button"
 			class="flex h-[29px] w-[29px] items-center justify-center bg-white transition-colors hover:bg-slate-50"
 			on:click={toggleCredits}
-			aria-label={$creditsExpanded ? 'Collapse credits' : 'Expand credits'}
+			aria-label={$uiState.creditsExpanded ? 'Collapse credits' : 'Expand credits'}
 		>
 			<svg
 				class="h-4 w-4 text-slate-600 transition-transform duration-200"
-				style="transform: rotate({$creditsExpanded ? '180deg' : '0deg'})"
+				style="transform: rotate({$uiState.creditsExpanded ? '180deg' : '0deg'})"
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 24 24"
 				fill="none"

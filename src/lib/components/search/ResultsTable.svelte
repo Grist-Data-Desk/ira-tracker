@@ -3,16 +3,11 @@
 	import { orderBy } from 'lodash-es';
 	import type { Project } from '$lib/types';
 	import {
-		searchResults,
-		isSearching,
-		hasSearched,
-		activeFilters,
-		selectedColorMode,
-		allPoints,
-		isDataLoading,
-		currentTableCount
+		filteredResults,
+		searchState,
+		isDataLoading
 	} from '$lib/stores';
-	import { CATEGORIES } from '$lib/utils/constants';
+	import { isValidUrl } from '$lib/utils/url';
 
 	const ROW_HEIGHT = 33;
 	const ROWS = 7;
@@ -59,7 +54,7 @@
 			label: 'Link',
 			width: '5%',
 			format: (value: unknown) => {
-				if (!value) return '';
+				if (!value || !isValidUrl(value as string)) return '';
 				return `<a href="${value}" target="_blank" class="text-emerald-600 hover:text-emerald-700 hover:underline">View details</a>`;
 			}
 		}
@@ -67,7 +62,7 @@
 
 	function minlengthof(length: number) {
 		length = Math.floor(length);
-		return Math.min(filteredResults.length, length);
+		return Math.min($filteredResults.length, length);
 	}
 
 	function materialize(data: Project[]) {
@@ -96,12 +91,10 @@
 			};
 
 			const d = orderBy(
-				filteredResults,
+				$filteredResults,
 				[(item) => {
 					const value = item[col as keyof Project];
-					// For empty values, return a special value that will sort at the end
 					if (!value || value === '') return sort.desc ? '\uffff' : '';
-					// For amount, convert to number for proper sorting
 					if (col === 'fundingAmount') {
 						const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
 						return isNaN(num) ? (sort.desc ? '\uffff' : '') : num;
@@ -116,7 +109,7 @@
 
 	function onScroll() {
 		const threshold = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight;
-		if (threshold < ROW_HEIGHT * 2 && n < filteredResults.length) {
+		if (threshold < ROW_HEIGHT * 2 && n < $filteredResults.length) {
 			const nextN = minlengthof(n + ROWS);
 			if (nextN > n) {
 				appendRows(n, nextN);
@@ -136,7 +129,6 @@
 		const isAtTop = container.scrollTop === 0;
 		const isAtBottom = container.scrollHeight - container.scrollTop === container.clientHeight;
 		
-		// Only prevent default if scrolling would go beyond bounds
 		if (
 			(isScrollingUp && !isAtTop) || 
 			(isScrollingDown && !isAtBottom) ||
@@ -145,94 +137,25 @@
 			event.preventDefault();
 			event.stopPropagation();
 			
-			// Manual scroll
 			container.scrollTop += deltaY;
 			container.scrollLeft += deltaX;
 		}
 	}
 
-	$: filteredResults = (
-		$hasSearched
-			? $searchResults
-			: $allPoints.collection?.features.map((feature) => {
-					const props = feature.properties || {};
-					const coords = feature.geometry.coordinates as [number, number];
-					return {
-						uid: props.UID || '',
-						dataSource: props['Data Source'] || '',
-						fundingSource: props['Funding Source'] || '',
-						programId: props['Program ID'] || '',
-						programName: props['Program Name'] || '',
-						projectName: props['Project Name'] || '',
-						projectDescription: props['Project Description'] || '',
-						projectLocationType: props['Project Location Type'] || '',
-						city: props.City || '',
-						county: props.County || '',
-						tribe: props.Tribe || '',
-						state: props.State || '',
-						congressionalDistrict: props['118th CD'] || '',
-						fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
-						link: props.Link || '',
-						agencyName: props['Agency Name'] || '',
-						bureauName: props['Bureau Name'] || '',
-						category: props.Category || '',
-						subcategory: props.Subcategory || '',
-						programType: props['Program Type'] || '',
-						latitude: coords[1],
-						longitude: coords[0]
-					};
-				}) || []
-	).filter((project) => {
-		const currentMode = $selectedColorMode;
-		const currentFilters = $activeFilters[currentMode];
-
-		if (currentFilters.size === 0) return true;
-
-		let fieldValue = '';
-		switch (currentMode) {
-			case 'agency':
-				fieldValue = project.agencyName;
-				break;
-			case 'category':
-				fieldValue = project.category;
-				break;
-			case 'fundingSource':
-				fieldValue = project.fundingSource;
-				break;
-		}
-
-		const isInMainCategories = currentFilters.has(fieldValue);
-		const mainCategories =
-			currentMode === 'agency'
-				? CATEGORIES.agency
-				: currentMode === 'category'
-					? CATEGORIES.category
-					: CATEGORIES.fundingSource;
-
-		const isOther = !mainCategories.includes(fieldValue);
-
-		return isInMainCategories || (currentFilters.has('Other') && isOther);
-	});
-
 	$: {
-		const currentFilters = $activeFilters[$selectedColorMode];
-		if (filteredResults) {
-			materialize(filteredResults);
-			if (!$isDataLoading) {
-				currentTableCount.set(filteredResults.length);
-			}
+		if ($filteredResults) {
+			materialize($filteredResults);
 		}
 	}
 
 	onMount(() => {
-		if (filteredResults) {
+		if ($filteredResults) {
 			appendRows(0, n);
 		}
 
 		const handleDownload = () => downloadCurrentView();
 		window.addEventListener('downloadcsv', handleDownload);
 
-		// Add wheel event listener with passive: false to allow preventDefault
 		window.addEventListener('wheel', handleWheel, { passive: false });
 
 		return () => {
@@ -244,7 +167,7 @@
 	function downloadCurrentView() {
 		const headers = cols.map((col) => col.label).join(',');
 
-		const rows = filteredResults
+		const rows = $filteredResults
 			.map((row) => {
 				return cols
 					.map((col) => {
@@ -288,7 +211,7 @@
 				<p class="text-sm text-slate-500">Loading project data...</p>
 			</div>
 		</div>
-	{:else if $isSearching}
+	{:else if $searchState.isSearching}
 		<div class="absolute inset-0 flex items-center justify-center">
 			<div class="flex items-center gap-3">
 				<div

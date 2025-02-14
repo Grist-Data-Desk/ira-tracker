@@ -57,6 +57,11 @@
 	border: none;
 }
 
+/* Make popups appear above other UI elements */
+.maplibregl-popup {
+	z-index: 100;
+}
+
 @layer base {
 	@font-face {
 		font-display: auto;

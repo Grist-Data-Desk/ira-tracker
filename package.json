@@ -21,7 +21,7 @@
 		"upload:styles": "tsx scripts/src/upload-styles.ts",
 		"process-all": "pnpm gen:geojson && pnpm gen:pmtiles && pnpm upload:geojson && pnpm upload:pmtiles && pnpm upload:styles",
 		"publish:app": "tsx scripts/src/deploy.ts",
-		"build-and-publish": "USE_CDN=true node -r esbuild-register scripts/src/deploy.ts"
+		"build-and-publish": "pnpm build:cdn && pnpm publish:app"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -57,7 +57,6 @@
 		"lodash-es": "^4.17.21",
 		"maplibre-gl": "^5.0.1",
 		"pmtiles": "^4.2.1",
-		"roughjs": "^4.6.6",
 		"tippecanoe": "^0.6.0"
 	}
 }

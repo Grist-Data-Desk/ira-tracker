@@ -1,6 +1,7 @@
 import type { Project } from '../types';
 import type { Popup } from 'maplibre-gl';
 import maplibregl from 'maplibre-gl';
+import { isValidUrl } from './url';
 
 export class ProjectPopup {
 	private map: maplibregl.Map;
@@ -36,7 +37,6 @@ export class ProjectPopup {
 			.addTo(this.map);
 
 		setTimeout(() => {
-			// Add event listeners for pagination controls
 			const popupContent = this.popup?.getElement()?.querySelector('.maplibregl-popup-content');
 			if (popupContent) {
 				const prevBtn = popupContent.querySelector('.prev-btn');
@@ -49,7 +49,6 @@ export class ProjectPopup {
 					nextBtn.addEventListener('click', () => this.showNext());
 				}
 
-				// Reset scroll position
 				const contentDiv = popupContent.querySelector('div');
 				if (contentDiv) {
 					contentDiv.scrollTop = 0;
@@ -78,7 +77,6 @@ export class ProjectPopup {
 		if (this.popup) {
 			this.popup.setHTML(this.createPopupContent(this.features[this.currentIndex]));
 
-			// Reattach event listeners
 			setTimeout(() => {
 				const popupContent = this.popup?.getElement()?.querySelector('.maplibregl-popup-content');
 				if (popupContent) {
@@ -92,7 +90,6 @@ export class ProjectPopup {
 						nextBtn.addEventListener('click', () => this.showNext());
 					}
 
-					// Reset scroll position
 					const contentDiv = popupContent.querySelector('div');
 					if (contentDiv) {
 						contentDiv.scrollTop = 0;
@@ -128,7 +125,6 @@ export class ProjectPopup {
 			return parts.join(', ');
 		};
 
-		// Add pagination controls if there are multiple features
 		const paginationControls =
 			this.features.length > 1
 				? `<div class="flex items-center justify-between mt-2 pt-1.5 border-t border-gray-200 text-[11px]">
@@ -162,7 +158,7 @@ export class ProjectPopup {
           <p><strong>Funding Source:</strong> ${project.fundingSource}</p>
           <p><strong>Amount:</strong> ${formatCurrency(project.fundingAmount)}</p>
           <p><strong>Location:</strong> ${formatLocation(project.city, project.county, project.state)}</p>
-          ${project.link ? `<p class="mt-1.5"><a href="${project.link}" target="_blank" class="text-blue-600 hover:underline">More Information →</a></p>` : ''}
+          ${isValidUrl(project.link) ? `<p class="mt-1.5"><a href="${project.link}" target="_blank" class="text-blue-600 hover:underline">More Information →</a></p>` : ''}
         </div>
         ${paginationControls}
       </div>

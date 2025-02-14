@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type ColorMode, selectedColorMode, activeFilters, legendOpen } from '$lib/stores';
+	import { visualState, uiState } from '$lib/stores';
 	import { COLORS, CATEGORIES } from '$lib/utils/constants';
 
 	const colorOrder = [
@@ -36,7 +36,7 @@
 		]
 	};
 
-	const modes: { value: ColorMode; label: string }[] = [
+	const modes = [
 		{ value: 'agency', label: 'Agency' },
 		{ value: 'category', label: 'Category' },
 		{ value: 'fundingSource', label: 'Funding' }
@@ -44,37 +44,41 @@
 
 	function handleModeChange(event: Event) {
 		const target = event.target as HTMLInputElement;
-		const mode = target.value as ColorMode;
-		selectedColorMode.set(mode);
-		// Clear all filters when changing modes
-		activeFilters.update((filters) => {
-			Object.keys(filters).forEach((key) => {
-				filters[key].clear();
-			});
-			return filters;
-		});
+		visualState.update(state => ({ 
+			...state, 
+			colorMode: target.value as typeof state.colorMode,
+			filters: new Set()
+		}));
 	}
 
 	function toggleFilter(label: string) {
-		activeFilters.update((filters) => {
-			const currentMode = $selectedColorMode;
-			const currentFilters = filters[currentMode];
-
-			if (currentFilters.has(label)) {
-				currentFilters.delete(label);
+		const newFilters = new Set($visualState.filters);
+		
+		if (newFilters.has(label)) {
+			newFilters.delete(label);
+		} else {
+			if (newFilters.size === 0) {
+				newFilters.add(label);
 			} else {
-				if (currentFilters.size === 0) {
-					currentFilters.add(label);
+				if (label === 'Other') {
+					newFilters.add('Other');
+				} else if (CATEGORIES[$visualState.colorMode].includes(label)) {
+					newFilters.delete('Other');
+					newFilters.add(label);
 				} else {
-					currentFilters.add(label);
+					newFilters.add(label);
 				}
 			}
-
-			return filters;
-		});
+		}
+		
+		const updatedFilters = new Set(newFilters);
+		visualState.update(state => ({
+			...state,
+			filters: updatedFilters
+		}));
 	}
 
-	$: isItemActive = (label: string) => $activeFilters[$selectedColorMode].has(label);
+	$: isItemActive = (label: string) => $visualState.filters.has(label);
 
 	const longestLabel = Math.max(
 		...Object.values(legendItems).flatMap((items) => items.map((item) => item.label.length))
@@ -86,7 +90,7 @@
 <div
 	class={[
 		'floating-panel absolute z-[15] bg-white px-2 pb-2 pt-0.5 shadow-lg md:bottom-auto md:left-auto md:right-[calc(3%+48px)] md:top-4 md:block',
-		$legendOpen ? 'bottom-[calc(40px+0.5rem)] left-[calc(3%+2.5rem)]' : 'hidden'
+		$uiState.legendExpanded ? 'bottom-[calc(40px+0.5rem)] left-[calc(3%+2.5rem)]' : 'hidden'
 	]}
 	style="min-width: {minPanelWidth}px"
 >
@@ -110,15 +114,15 @@
 	<div class="mode-selector relative mb-2 grid grid-cols-3">
 		<div
 			class="mode-selector__background"
-			class:agency={$selectedColorMode === 'agency'}
-			class:category={$selectedColorMode === 'category'}
-			class:funding={$selectedColorMode === 'fundingSource'}
+			class:agency={$visualState.colorMode === 'agency'}
+			class:category={$visualState.colorMode === 'category'}
+			class:funding={$visualState.colorMode === 'fundingSource'}
 		></div>
 		{#each modes as mode}
 			<div class="mode-selector__radio-container relative">
 				<input
 					type="radio"
-					bind:group={$selectedColorMode}
+					bind:group={$visualState.colorMode}
 					id="{mode.value}-radio"
 					value={mode.value}
 					class="mode-selector__radio-input absolute opacity-0"
@@ -127,7 +131,7 @@
 				<label
 					for="{mode.value}-radio"
 					class="mode-selector__radio-label relative z-10 block cursor-pointer py-1.5 text-center font-['PolySans'] text-xs"
-					class:active={$selectedColorMode === mode.value}
+					class:active={$visualState.colorMode === mode.value}
 				>
 					{mode.label}
 				</label>
@@ -135,10 +139,10 @@
 		{/each}
 	</div>
 	<div class="space-y-0.5">
-		{#each legendItems[$selectedColorMode] as item}
+		{#each legendItems[$visualState.colorMode] as item}
 			<button
 				class="flex w-full items-center gap-2 rounded border border-gray-200 bg-slate-50/90 px-1.5 py-0.5 transition-colors hover:bg-gray-100"
-				class:opacity-40={$activeFilters[$selectedColorMode].size > 0 && !isItemActive(item.label)}
+				class:opacity-40={$visualState.filters.size > 0 && !isItemActive(item.label)}
 				on:click={() => toggleFilter(item.label)}
 			>
 				<div class="h-2 w-2 rounded-full" style="background-color: {item.color}"></div>

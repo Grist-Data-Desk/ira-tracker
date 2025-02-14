@@ -1,14 +1,11 @@
 <script lang="ts">
 	import {
-		searchResults,
-		searchQuery,
-		searchRadius,
-		isSearching,
-		isDataLoading,
-		activeFilters,
-		selectedColorMode
+		searchState,
+		visualState,
+		filteredResults,
+		currentCount,
+		isDataLoading
 	} from '$lib/stores';
-	import { CATEGORIES } from '$lib/utils/constants';
 	import { debounce } from 'lodash-es';
 
 	export let onSearch: () => void;
@@ -40,40 +37,7 @@
 		return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 	}
 
-	$: filteredResults = $searchResults.filter((project) => {
-		const currentMode = $selectedColorMode;
-		const currentFilters = $activeFilters[currentMode];
-
-		if (currentFilters.size === 0) return true;
-
-		let fieldValue = '';
-		switch (currentMode) {
-			case 'agency':
-				fieldValue = project.agencyName;
-				break;
-			case 'category':
-				fieldValue = project.category;
-				break;
-			case 'fundingSource':
-				fieldValue = project.fundingSource;
-				break;
-		}
-
-		const isInMainCategories = currentFilters.has(fieldValue);
-
-		const mainCategories =
-			currentMode === 'agency'
-				? CATEGORIES.agency
-				: currentMode === 'category'
-					? CATEGORIES.category
-					: CATEGORIES.fundingSource;
-
-		const isOther = !mainCategories.includes(fieldValue);
-
-		return isInMainCategories || (currentFilters.has('Other') && isOther);
-	});
-
-	$: totalAwardAmount = filteredResults.reduce((sum, project) => {
+	$: totalAwardAmount = $filteredResults.reduce((sum, project) => {
 		if (!project.fundingAmount) return sum;
 		const amount =
 			typeof project.fundingAmount === 'string'
@@ -132,7 +96,7 @@
 
 	function onInput(event: Event) {
 		const input = event.target as HTMLInputElement;
-		$searchQuery = input.value;
+		searchState.update(state => ({ ...state, query: input.value }));
 		fetchSuggestions(input.value);
 	}
 
@@ -152,7 +116,7 @@
 	}
 
 	function onSuggestionClick(suggestion: (typeof suggestions)[0]) {
-		$searchQuery = suggestion.place_name;
+		searchState.update(state => ({ ...state, query: suggestion.place_name }));
 		showSuggestions = false;
 		handleSearch();
 	}
@@ -213,7 +177,7 @@
 					type="text"
 					id="search"
 					bind:this={searchInput}
-					bind:value={$searchQuery}
+					value={$searchState.query}
 					on:input={onInput}
 					on:keydown={onKeyDown}
 					on:focus={onInputFocus}
@@ -256,7 +220,8 @@
 			<input
 				type="number"
 				id="radius"
-				bind:value={$searchRadius}
+				value={$searchState.radius}
+				on:input={(e) => searchState.update(state => ({ ...state, radius: parseInt(e.currentTarget.value) }))}
 				class="search-input w-full rounded border border-slate-300 bg-white/50 p-1.5 font-['Basis_Grotesque'] transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
 				min="1"
 				max="500"
@@ -268,9 +233,9 @@
 			<button
 				on:click={handleSearch}
 				class="flex w-[100px] items-center justify-center gap-2 whitespace-nowrap rounded-md border border-emerald-600 bg-emerald-500 p-1.5 font-['Basis_Grotesque'] text-white shadow-md transition-all hover:bg-emerald-600 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-				disabled={$isDataLoading || $isSearching}
+				disabled={$isDataLoading || $searchState.isSearching}
 			>
-				{#if $isDataLoading || $isSearching}
+				{#if $isDataLoading || $searchState.isSearching}
 					<div class="flex items-center gap-2">
 						<svg
 							class="h-4 w-4 animate-spin"
@@ -315,24 +280,24 @@
 	</div>
 
 	<div class="overflow-hidden">
-		{#if $searchResults.length > 0 || true}
+		{#if $searchState.results.length > 0 || true}
 			<div
 				class="transition-all duration-300 ease-in-out"
-				style="transform: translateY({$searchResults.length > 0 ? '0' : '-100%'}); 
-                  opacity: {$searchResults.length > 0 ? '1' : '0'}; 
-                  margin-top: {$searchResults.length > 0 ? '0.25rem' : '-10rem'};"
+				style="transform: translateY({$searchState.results.length > 0 ? '0' : '-100%'}); 
+                  opacity: {$searchState.results.length > 0 ? '1' : '0'}; 
+                  margin-top: {$searchState.results.length > 0 ? '0.25rem' : '-10rem'};"
 			>
 				<div class="font-['Basis_Grotesque']">
 					<p class="mt-0 mb-3 text-xs text-slate-600 md:text-sm">
 						Total funding across <span class="font-bold text-emerald-600"
-							>{filteredResults.length} project{filteredResults.length === 1 ? '' : 's'}</span
+							>{$currentCount} project{$currentCount === 1 ? '' : 's'}</span
 						>
 						in search radius
-						{#if $activeFilters[$selectedColorMode].size > 0}
-							(filtered by {$selectedColorMode === 'fundingSource'
+						{#if $visualState.filters.size > 0}
+							(filtered by {$visualState.colorMode === 'fundingSource'
 								? 'funding source'
-								: $selectedColorMode} to include {(() => {
-								const items = Array.from($activeFilters[$selectedColorMode]);
+								: $visualState.colorMode} to include {(() => {
+								const items = Array.from($visualState.filters);
 								if (items.length === 1) return items[0];
 								if (items.length === 2) return `${items[0]} and ${items[1]}`;
 								return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;

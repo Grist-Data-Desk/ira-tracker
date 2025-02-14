@@ -103,8 +103,8 @@ async function main(): Promise<void> {
 		}
 	});
 
-	console.log(`Deleting objects at ${IRA_MAP_PATH}`);
-	await deleteMap(s3Client);
+	// console.log(`Deleting objects at ${IRA_MAP_PATH}`);
+	// await deleteMap(s3Client);
 
 	const files = await fs.readdir(path.resolve(__dirname, '../../build/_app'), { recursive: true });
 
