@@ -117,6 +117,18 @@ export class ProjectPopup {
 			}).format(amount);
 		};
 
+		const formatPercent = (value: unknown) => {
+			if (!value) return '';
+			const amount =
+				typeof value === 'string'
+					? parseFloat(value.replace(/[^0-9.-]/g, ''))
+					: typeof value === 'number'
+						? value
+						: 0;
+			if (isNaN(amount)) return '';
+			return `${amount.toFixed(1)}%`;
+		};
+
 		const formatLocation = (city?: string, county?: string, state?: string) => {
 			const parts = [];
 			if (city) parts.push(city);
@@ -157,6 +169,8 @@ export class ProjectPopup {
           <p><strong>Category:</strong> ${project.category}</p>
           <p><strong>Funding Source:</strong> ${project.fundingSource}</p>
           <p><strong>Amount:</strong> ${formatCurrency(project.fundingAmount)}</p>
+          ${project.outlayedAmountFromIIJASupplemental ? `<p><strong>Outlayed Funds:</strong> ${formatCurrency(project.outlayedAmountFromIIJASupplemental)}</p>` : ''}
+          ${project.percentIIJAOutlayed ? `<p><strong>Percent Outlayed:</strong> ${formatPercent(project.percentIIJAOutlayed)}</p>` : ''}
           <p><strong>Location:</strong> ${formatLocation(project.city, project.county, project.state)}</p>
           ${isValidUrl(project.link) ? `<p class="mt-1.5"><a href="${project.link}" target="_blank" class="text-blue-600 hover:underline">More Information →</a></p>` : ''}
         </div>

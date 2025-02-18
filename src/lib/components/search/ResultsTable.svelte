@@ -21,12 +21,12 @@
 	let isHovering = false;
 
 	const cols = [
-		{ key: 'projectName', label: 'Project Name', width: '25%' },
+		{ key: 'projectName', label: 'Project Name', width: '20%' },
 		{ key: 'agencyName', label: 'Agency', width: '15%' },
-		{ key: 'fundingSource', label: 'Funding Source', width: '10%' },
+		{ key: 'fundingSource', label: 'Funding Source', width: '8%' },
 		{
 			key: 'fundingAmount',
-			label: 'Amount',
+			label: 'Announced Funding',
 			width: '10%',
 			format: (value: unknown) => {
 				if (!value) return '';
@@ -45,10 +45,47 @@
 				}).format(amount);
 			}
 		},
+		{
+			key: 'outlayedAmountFromIIJASupplemental',
+			label: 'Outlayed Funds',
+			width: '10%',
+			format: (value: unknown) => {
+				if (!value) return '';
+				const amount =
+					typeof value === 'string'
+						? parseFloat(value.replace(/[^0-9.-]/g, ''))
+						: typeof value === 'number'
+							? value
+							: 0;
+				if (isNaN(amount)) return '';
+				return new Intl.NumberFormat('en-US', {
+					style: 'currency',
+					currency: 'USD',
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2
+				}).format(amount);
+			}
+		},
+		{
+			key: 'percentIIJAOutlayed',
+			label: 'Percent Outlayed',
+			width: '7%',
+			format: (value: unknown) => {
+				if (!value) return '';
+				const amount =
+					typeof value === 'string'
+						? parseFloat(value.replace(/[^0-9.-]/g, ''))
+						: typeof value === 'number'
+							? value
+							: 0;
+				if (isNaN(amount)) return '';
+				return `${amount.toFixed(1)}%`;
+			}
+		},
 		{ key: 'category', label: 'Program Category', width: '10%' },
 		{ key: 'subcategory', label: 'Program Subcategory', width: '10%' },
-		{ key: 'projectLocationType', label: 'Grantee Type', width: '8%' },
-		{ key: 'congressionalDistrict', label: 'Congressional District', width: '7%' },
+		{ key: 'projectLocationType', label: 'Grantee Type', width: '5%' },
+		{ key: 'congressionalDistrict', label: 'Congressional District', width: '5%' },
 		{
 			key: 'link',
 			label: 'Link',
@@ -94,11 +131,25 @@
 				$filteredResults,
 				[(item) => {
 					const value = item[col as keyof Project];
-					if (!value || value === '') return sort.desc ? '\uffff' : '';
-					if (col === 'fundingAmount') {
-						const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
-						return isNaN(num) ? (sort.desc ? '\uffff' : '') : num;
+					
+					// Handle empty/null values
+					if (!value || value === '') {
+						return sort.desc ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
 					}
+
+					// Special handling for numeric columns
+					if (col === 'fundingAmount' || col === 'outlayedAmountFromIIJASupplemental') {
+						const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+						return isNaN(num) ? (sort.desc ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : num;
+					}
+
+					// Special handling for percentage column
+					if (col === 'percentIIJAOutlayed') {
+						const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+						return isNaN(num) ? (sort.desc ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : num;
+					}
+
+					// Default string sorting
 					return value;
 				}],
 				[sort.desc ? 'desc' : 'asc']
@@ -242,11 +293,10 @@
 									class="group relative border-b border-slate-200 bg-slate-100/95 p-2 text-left font-['PolySans'] text-xs font-medium shadow-sm backdrop-blur-sm transition-colors first:rounded-tl-lg last:rounded-tr-lg hover:cursor-pointer hover:bg-slate-200/95"
 									class:sort-desc={sort.col === key && sort.desc}
 									class:sort-asc={sort.col === key && !sort.desc}
-									class:text-right={key === 'fundingAmount'}
 									style="width: {width}"
 									on:click={resort(key)}
 								>
-									<span class="flex items-center gap-1 text-slate-700 {key === 'fundingAmount' ? 'justify-end' : ''}">
+									<span class="flex items-center gap-1 text-slate-700">
 										{label}
 										<svg
 											class="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100"
@@ -277,7 +327,6 @@
 								{#each cols as { key, format, width }}
 									<td 
 										class="whitespace-normal border-b border-slate-200 p-2 text-xs text-slate-600"
-										class:text-right={key === 'fundingAmount'}
 										style="width: {width}"
 									>
 										{#if key === 'link' && row[key]}

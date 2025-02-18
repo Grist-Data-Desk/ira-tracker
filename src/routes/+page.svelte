@@ -177,6 +177,21 @@
 			let data;
 			try {
 				data = JSON.parse(decompressed) as ProjectFeatureCollection;
+				// Log all available property keys from the first feature
+				if (data.features.length > 0) {
+					console.log('Available property keys:', 
+						Object.keys(data.features[0].properties || {})
+					);
+				}
+				// Log a sample of the raw data
+				console.log('Sample GeoJSON feature properties:', 
+					data.features.slice(0, 3).map(f => ({
+						...f.properties,
+						outlayed: f.properties?.['Outlayed Amount From IIJA Supplemental'],
+						obligated: f.properties?.['Obligated Amount From IIJA Supplemental'],
+						percent: f.properties?.['Percent IIJA Outlayed']
+					}))
+				);
 			} catch (e) {
 				console.error('Failed to parse JSON:', e);
 				throw new Error('Failed to parse decompressed data as JSON');
@@ -471,6 +486,9 @@
 			state: props.State || '',
 			congressionalDistrict: props['118th CD'] || '',
 			fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
+			outlayedAmountFromIIJASupplemental: props['Outlayed Amount From IIJA Supplemental'] ? String(props['Outlayed Amount From IIJA Supplemental']) : '',
+			obligatedAmountFromIIJASupplemental: props['Obligated Amount From IIJA Supplemental'] ? String(props['Obligated Amount From IIJA Supplemental']) : '',
+			percentIIJAOutlayed: props['Percent IIJA Outlayed'] ? String(props['Percent IIJA Outlayed']) : '',
 			link: props.Link || '',
 			agencyName: props['Agency Name'] || '',
 			bureauName: props['Bureau Name'] || '',
@@ -566,6 +584,9 @@
 
 				map.on('click', LAYER_CONFIG.projectsPoints.id, (e) => {
 					if (!e.features?.length) return;
+
+					console.log('Raw feature from PMTiles:', e.features[0]);
+					console.log('Raw feature properties:', e.features[0].properties);
 
 					const featuresByLocation = e.features.reduce(
 						(acc: { [key: string]: any[] }, feature: any) => {

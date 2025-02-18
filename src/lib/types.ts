@@ -16,6 +16,9 @@ export interface Project {
 	state: string;
 	congressionalDistrict: string;
 	fundingAmount: string;
+	outlayedAmountFromIIJASupplemental: string;
+	obligatedAmountFromIIJASupplemental: string;
+	percentIIJAOutlayed: string;
 	link: string;
 	agencyName: string;
 	bureauName: string;
