@@ -47,7 +47,7 @@
 		},
 		{
 			key: 'outlayedAmountFromIIJASupplemental',
-			label: 'Outlayed Funds',
+			label: 'Funding Received',
 			width: '10%',
 			format: (value: unknown) => {
 				if (!value) return '';
@@ -68,7 +68,7 @@
 		},
 		{
 			key: 'percentIIJAOutlayed',
-			label: 'Percent Outlayed',
+			label: 'Percent Received',
 			width: '7%',
 			format: (value: unknown) => {
 				if (!value) return '';

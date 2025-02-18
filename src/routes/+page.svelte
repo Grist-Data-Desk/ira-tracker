@@ -166,7 +166,7 @@
 	async function loadGeoJSONData() {
 		try {
 			dataStore.update(state => ({ ...state, isLoading: true }));
-			const response = await fetch(`${DO_SPACES_URL}/${GEOJSON_PATH}/projects.geojson.br`);
+			const response = await fetch(`${DO_SPACES_URL}/${GEOJSON_PATH}/projects.geojson.br?v=${Date.now()}`);
 			if (!response.ok) throw new Error('Failed to load GeoJSON data');
 
 			const buffer = await response.arrayBuffer();
@@ -508,7 +508,7 @@
 			const protocol = new pmtiles.Protocol();
 			maplibregl.addProtocol('pmtiles', protocol.tile);
 
-			const pmtilesUrl = `${DO_SPACES_URL}/${PMTILES_PATH}/projects.pmtiles`;
+			const pmtilesUrl = `${DO_SPACES_URL}/${PMTILES_PATH}/projects.pmtiles?v=${Date.now()}`;
 			pmtilesInstance = new pmtiles.PMTiles(pmtilesUrl);
 			protocol.add(pmtilesInstance);
 

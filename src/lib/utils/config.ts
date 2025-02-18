@@ -41,21 +41,21 @@ export const SOURCE_CONFIG: Record<string, { id: string; config: SourceSpecifica
 		id: 'projects',
 		config: {
 			type: 'vector',
-			url: `pmtiles://${DO_SPACES_URL}/${PMTILES_PATH}/projects.pmtiles`
+			url: `pmtiles://${DO_SPACES_URL}/${PMTILES_PATH}/projects.pmtiles?v=${Date.now()}`
 		}
 	},
 	reservations: {
 		id: 'reservations',
 		config: {
 			type: 'vector',
-			url: `pmtiles://${DO_SPACES_URL}/${PMTILES_PATH}/reservations.pmtiles`
+			url: `pmtiles://${DO_SPACES_URL}/${PMTILES_PATH}/reservations.pmtiles?v=${Date.now()}`
 		}
 	},
 	reservationLabels: {
 		id: 'reservation-labels',
 		config: {
 			type: 'vector',
-			url: `pmtiles://${DO_SPACES_URL}/${PMTILES_PATH}/reservation-labels.pmtiles`
+			url: `pmtiles://${DO_SPACES_URL}/${PMTILES_PATH}/reservation-labels.pmtiles?v=${Date.now()}`
 		}
 	}
 };

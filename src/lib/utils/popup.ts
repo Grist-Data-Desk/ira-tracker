@@ -168,9 +168,9 @@ export class ProjectPopup {
           <p><strong>Program:</strong> ${project.programName}</p>
           <p><strong>Category:</strong> ${project.category}</p>
           <p><strong>Funding Source:</strong> ${project.fundingSource}</p>
-          <p><strong>Amount:</strong> ${formatCurrency(project.fundingAmount)}</p>
-          ${project.outlayedAmountFromIIJASupplemental ? `<p><strong>Outlayed Funds:</strong> ${formatCurrency(project.outlayedAmountFromIIJASupplemental)}</p>` : ''}
-          ${project.percentIIJAOutlayed ? `<p><strong>Percent Outlayed:</strong> ${formatPercent(project.percentIIJAOutlayed)}</p>` : ''}
+          <p><strong>Announced Funding:</strong> ${formatCurrency(project.fundingAmount)}</p>
+          ${project.outlayedAmountFromIIJASupplemental ? `<p><strong>Funding Received:</strong> ${formatCurrency(project.outlayedAmountFromIIJASupplemental)}</p>` : ''}
+          ${project.percentIIJAOutlayed ? `<p><strong>Percent Received:</strong> ${formatPercent(project.percentIIJAOutlayed)}</p>` : ''}
           <p><strong>Location:</strong> ${formatLocation(project.city, project.county, project.state)}</p>
           ${isValidUrl(project.link) ? `<p class="mt-1.5"><a href="${project.link}" target="_blank" class="text-blue-600 hover:underline">More Information →</a></p>` : ''}
         </div>
