@@ -6,7 +6,7 @@ This document outlines the methodology used for processing and deduplicating pro
 
 The data processing pipeline consists of these steps:
 1. Project deduplication and merging (`project-similarity.py`)
-2. USAspending data integration (`transform-and-merge.py`)
+2. USAspending data integration (`add-usaspending.py`)
 3. Map data generation (`csv-to-geojson.ts` and `geojson-to-pmtiles.ts`)
 
 ## 1. Project Deduplication and Merging
@@ -68,8 +68,22 @@ The script employs several optimization strategies:
 - State-based indexing for quick location filtering
 - [TF-IDF](https://www.geeksforgeeks.org/understanding-tf-idf-term-frequency-inverse-document-frequency/) vectorization for text similarity comparisons
 - Parallel processing for large datasets
+- Concurrent API calls for location data lookups
 
-#### D. Decision Making
+#### D. Location Data Processing
+The script efficiently handles location data enrichment for new projects added to the database:
+
+1. Concurrent Processing
+   - Uses `ThreadPoolExecutor` to make multiple concurrent API calls to the Census Bureau
+   - Default of 10 concurrent workers to balance speed and API rate limits
+   - Processes API responses as they complete, rather than waiting for all to finish
+
+2. Selective API Usage
+   - Only performs lookups for new projects being added to the database
+   - Preserves existing location data for projects already in the main file
+   - Checks for missing fields (congressional district, state, city, county) before making API calls
+
+#### E. Decision Making
 Projects are categorized based on similarity scores:
 - High confidence matches (≥80 points): Considered duplicates
 - Medium confidence matches (40-79 points): Flagged for manual review
@@ -132,4 +146,5 @@ The pipeline produces these outputs:
 - The deduplication process is conservative, preferring to flag uncertain matches for review rather than making incorrect assumptions
 - Geographic coordinates are validated to ensure they fall within valid ranges
 - Text comparisons use normalized forms (removing common words, standardizing case, etc.)
-- The process maintains audit trails by preserving original source information 
+- The process maintains audit trails by preserving original source information
+- Location data lookups are optimized through concurrent processing and selective API usage 

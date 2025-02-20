@@ -8,7 +8,7 @@
 		currentCount,
 		isDataLoading
 	} from '$lib/stores';
-	import { TABLET_BREAKPOINT, CATEGORIES } from '$lib/utils/constants';
+	import { TABLET_BREAKPOINT, CATEGORIES, STATE_BOUNDS } from '$lib/utils/constants';
 	import maplibregl from 'maplibre-gl';
 	import * as pmtiles from 'pmtiles';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -502,6 +502,11 @@
 
 	onMount(async () => {
 		browser = true;
+		
+		const urlParams = new URLSearchParams(window.location.search);
+		const stateParam = urlParams.get('state')?.toLowerCase();
+		const stateConfig = stateParam ? STATE_BOUNDS[stateParam] : undefined;
+
 		try {
 			await loadGeoJSONData();
 
@@ -517,8 +522,8 @@
 			map = new maplibregl.Map({
 				container: 'map-container',
 				style: `${DO_SPACES_URL}/${STYLES_PATH}/map-style.json`,
-				center: [-98.5795, isTabletOrAbove ? 39.8283 : 49],
-				zoom: isTabletOrAbove ? 4 : 3,
+				center: stateConfig?.center ?? [-98.5795, isTabletOrAbove ? 39.8283 : 49],
+				zoom: stateConfig?.zoom ?? (isTabletOrAbove ? 4 : 3),
 				minZoom: 2,
 				attributionControl: false
 			});

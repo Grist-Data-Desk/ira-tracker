@@ -13,12 +13,14 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from rtree import index
 from collections import defaultdict
+import requests
+from concurrent.futures import as_completed
 
 NUM_PROCESSES = os.cpu_count() or 4
 CHUNK_SIZE = 100
@@ -143,41 +145,52 @@ def clean_coordinate(value):
 
 
 def normalize_state(state):
-    """Normalize state names to standard two-letter abbreviations."""
-    state_map = {
-        'ALABAMA': 'AL', 'ALASKA': 'AK', 'ARIZONA': 'AZ', 'ARKANSAS': 'AR',
-        'CALIFORNIA': 'CA', 'COLORADO': 'CO', 'CONNECTICUT': 'CT', 'DELAWARE': 'DE',
-        'FLORIDA': 'FL', 'GEORGIA': 'GA', 'HAWAII': 'HI', 'IDAHO': 'ID',
-        'ILLINOIS': 'IL', 'INDIANA': 'IN', 'IOWA': 'IA', 'KANSAS': 'KS',
-        'KENTUCKY': 'KY', 'LOUISIANA': 'LA', 'MAINE': 'ME', 'MARYLAND': 'MD',
-        'MASSACHUSETTS': 'MA', 'MICHIGAN': 'MI', 'MINNESOTA': 'MN', 'MISSISSIPPI': 'MS',
-        'MISSOURI': 'MO', 'MONTANA': 'MT', 'NEBRASKA': 'NE', 'NEVADA': 'NV',
-        'NEW HAMPSHIRE': 'NH', 'NEW JERSEY': 'NJ', 'NEW MEXICO': 'NM', 'NEW YORK': 'NY',
-        'NORTH CAROLINA': 'NC', 'NORTH DAKOTA': 'ND', 'OHIO': 'OH', 'OKLAHOMA': 'OK',
-        'OREGON': 'OR', 'PENNSYLVANIA': 'PA', 'RHODE ISLAND': 'RI', 'SOUTH CAROLINA': 'SC',
-        'SOUTH DAKOTA': 'SD', 'TENNESSEE': 'TN', 'TEXAS': 'TX', 'UTAH': 'UT',
-        'VERMONT': 'VT', 'VIRGINIA': 'VA', 'WASHINGTON': 'WA', 'WEST VIRGINIA': 'WV',
-        'WISCONSIN': 'WI', 'WYOMING': 'WY', 'DISTRICT OF COLUMBIA': 'DC',
-        'PUERTO RICO': 'PR', 'VIRGIN ISLANDS': 'VI', 'GUAM': 'GU',
-        'AMERICAN SAMOA': 'AS', 'NORTHERN MARIANA ISLANDS': 'MP'
+    """Normalize state names to full names."""
+    abbrev_to_full = {
+        'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+        'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+        'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+        'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+        'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+        'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New Hampshire',
+        'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York', 'NC': 'North Carolina',
+        'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania',
+        'RI': 'Rhode Island', 'SC': 'South Carolina', 'SD': 'South Dakota', 'TN': 'Tennessee',
+        'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington',
+        'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming', 'DC': 'District of Columbia',
+        'PR': 'Puerto Rico', 'VI': 'Virgin Islands', 'GU': 'Guam', 'AS': 'American Samoa',
+        'MP': 'Northern Mariana Islands'
     }
     
+    full_to_abbrev = {v.upper(): k for k, v in abbrev_to_full.items()}
+    
+    ignore_patterns = [
+        'TBD', 'N/A', 'NA', 'TBA', 'US', 'USA', 'BD'
+    ]
+    
     if not state:
-        return None
-        
-    if re.match(r'^[A-Z]{2}$', state):
-        return state
+        return ''
     
-    normalized = state_map.get(state.upper())
-    if normalized:
-        return normalized
-        
-    match = re.search(r'\b([A-Z]{2})\b', state.upper())
-    if match:
-        if match.group(1) in state_map.values():
-            return match.group(1)
+    state = state.strip()
     
-    return state
+    if state.upper() in ignore_patterns:
+        return ''
+        
+    if any(pattern in state.upper() for pattern in ['TBD', 'TBA']):
+        return ''
+    
+    if state.upper() in full_to_abbrev:
+        return abbrev_to_full[full_to_abbrev[state.upper()]]
+    
+    if state.upper() in abbrev_to_full:
+        return abbrev_to_full[state.upper()]
+    
+    for abbrev in abbrev_to_full:
+        if re.search(r'\b' + abbrev + r'\b', state.upper()):
+            return abbrev_to_full[abbrev]
+    
+    return ''
+
 
 def extract_identifiers_main(row):
     """Extract key identifiers from the main CSV format."""
@@ -200,7 +213,8 @@ def extract_identifiers_main(row):
         'program_name': row.get('Program Name', ''),
         'program_id': row.get('Program ID', ''),
         'link': row.get('Link', ''),
-        'original_row': row
+        'original_row': row,
+        'congressional_district': row.get('118th CD', '') 
     }
 
 
@@ -221,7 +235,7 @@ def extract_identifiers_bia(row):
         'project_desc': row.get('benefits', ''),
         'latitude': clean_coordinate(row.get('POINT_Y')),
         'longitude': clean_coordinate(row.get('POINT_X')),
-        'state': normalize_state(state) if state else None,
+        'state': normalize_state(state) if state else '',
         'city': '' if is_tribe else tribe_or_city,
         'tribe': tribe_or_city if is_tribe else '',
         'county': '',
@@ -235,7 +249,8 @@ def extract_identifiers_bia(row):
         'program_id': f"BIA{row.get('fiscal_year', '')}",
         'link': row.get('hyperlink', ''),
         'original_row': row,
-        'source_file': 'bia'
+        'source_file': 'bia',
+        'congressional_district': ''  # Will be looked up later for new projects
     }
 
 
@@ -273,7 +288,8 @@ def extract_identifiers_doe(row):
         'program_id': f"DOE{uuid.uuid4().hex[:6]}",
         'link': '',
         'original_row': row,
-        'source_file': 'doe'
+        'source_file': 'doe',
+        'congressional_district': ''  # Will be looked up later for new projects
     }
 
 
@@ -311,7 +327,8 @@ def extract_identifiers_doi(row):
         'program_id': f"DOI{uuid.uuid4().hex[:6]}",
         'link': clean_row.get('Program Website', ''),
         'original_row': row,
-        'source_file': 'doi'
+        'source_file': 'doi',
+        'congressional_district': ''  # Will be looked up later for new projects
     }
 
 
@@ -343,7 +360,8 @@ def extract_identifiers_epa(row):
         'program_id': row.get('Federal Award Identification Number', f"EPA{uuid.uuid4().hex[:6]}"),
         'link': row.get('Website Url', '') or row.get('Announcement Url', ''),
         'original_row': row,
-        'source_file': 'epa'
+        'source_file': 'epa',
+        'congressional_district': ''  # Will be looked up later for new projects
     }
 
 
@@ -382,7 +400,8 @@ def extract_identifiers_noaa(row):
         'program_id': row.get('Award Number (FAIN)', f"NOAA{uuid.uuid4().hex[:6]}"),
         'link': row.get('Program Website', '') or row.get('Project Website', ''),
         'original_row': row,
-        'source_file': 'noaa'
+        'source_file': 'noaa',
+        'congressional_district': ''  # Will be looked up later for new projects
     }
 
 
@@ -407,7 +426,8 @@ def extract_identifiers_usbr(row):
         'program_id': row.get('Identifier', f"USBR{uuid.uuid4().hex[:6]}"),
         'link': row.get('PressRelease', ''),
         'original_row': row,
-        'source_file': 'usbr'
+        'source_file': 'usbr',
+        'congressional_district': ''  # Will be looked up later for new projects
     }
 
 
@@ -521,6 +541,7 @@ def map_usbr_category(subsection, subprogram):
         return 'Water'
     
     return 'Water'  
+
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Calculate Haversine distance between two points in kilometers."""
@@ -681,6 +702,7 @@ def create_spatial_index(projects):
             ))
     return idx
 
+
 def create_state_index(projects):
     """Create an index of projects by state for fast lookups."""
     state_idx = defaultdict(list)
@@ -688,6 +710,7 @@ def create_state_index(projects):
         if project['state']:
             state_idx[project['state']].append(i)
     return state_idx
+
 
 def precompute_text_features(projects):
     """Precompute TF-IDF features for project names and descriptions."""
@@ -699,6 +722,7 @@ def precompute_text_features(projects):
     
     texts = [f"{p['project_name']} {p['project_desc']}" for p in projects]
     return vectorizer, vectorizer.fit_transform(texts)
+
 
 def find_similar_projects_optimized(new_project, main_projects, spatial_idx, state_idx, 
                                   vectorizer, main_features, threshold=40.0):
@@ -747,6 +771,7 @@ def find_similar_projects_optimized(new_project, main_projects, spatial_idx, sta
     similar_projects.sort(key=lambda x: x['similarity']['score'], reverse=True)
     return similar_projects
 
+
 def process_chunk(chunk, main_projects, spatial_idx, state_idx, vectorizer, main_features, 
                  extract_func, args):
     """Process a chunk of rows in parallel."""
@@ -776,6 +801,7 @@ def process_chunk(chunk, main_projects, spatial_idx, state_idx, vectorizer, main
             })
     
     return new_projects, review_projects
+
 
 def create_review_record(new_project, similar_projects):
     """Create a record for manual review."""
@@ -825,7 +851,96 @@ def clean_link(link):
     return link.strip()
 
 
-def format_for_main_csv(project):
+def lookup_congressional_district(lat, lon, verbose=False):
+    """Look up location data (CD, state, city, county) for coordinates using Census Bureau API."""
+    if not lat or not lon:
+        if verbose:
+            print(f"  ⚠️  Skipping location lookup - invalid coordinates: lat={lat}, lon={lon}")
+        return {
+            'cd': '',
+            'state': '',
+            'city': '',
+            'county': ''
+        }
+        
+    if verbose:
+        print(f"  🌍 Looking up location data for coordinates: ({lat}, {lon})")
+        
+    FIPS_TO_STATE = {
+        '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA', '08': 'CO', '09': 'CT', 
+        '10': 'DE', '11': 'DC', '12': 'FL', '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', 
+        '18': 'IN', '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME', '24': 'MD', 
+        '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS', '29': 'MO', '30': 'MT', '31': 'NE', 
+        '32': 'NV', '33': 'NH', '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND', 
+        '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI', '45': 'SC', '46': 'SD', 
+        '47': 'TN', '48': 'TX', '49': 'UT', '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', 
+        '55': 'WI', '56': 'WY', '72': 'PR'
+    }
+        
+    try:    
+        url = "https://geocoding.geo.census.gov/geocoder/geographies/coordinates"
+        params = {
+            "x": str(lon), 
+            "y": str(lat),  
+            "benchmark": "4",  # Public_AR_Current
+            "vintage": "423",  # ACS2023_Current
+            "layers": "all",   # Get all geographic layers
+            "format": "json"
+        }
+        
+        if verbose:
+            print("  📡 Calling Census Bureau API...")
+            
+        response = requests.get(url, params=params, timeout=5)
+        if response.status_code != 200:
+            if verbose:
+                print(f"  ❌ API request failed with status code: {response.status_code}")
+            return {'cd': '', 'state': '', 'city': '', 'county': ''}
+            
+        data = response.json()
+        result = data.get('result', {}).get('geographies', {})
+            
+        cd_data = result.get('118th Congressional Districts', [])
+        cd_info = cd_data[0] if cd_data else {}
+        cd_num = cd_info.get('CD118', '')
+        state_fips = cd_info.get('STATE', '')
+        
+        counties = result.get('Counties', [])
+        county_name = counties[0].get('BASENAME', '') if counties else ''
+        
+        places = result.get('Incorporated Places', []) or result.get('Census Designated Places', [])
+        city_name = places[0].get('NAME', '') if places else ''
+        
+        if state_fips:
+            state_abbrev = FIPS_TO_STATE.get(state_fips, state_fips)
+            district = f"{state_abbrev}-{cd_num}" if cd_num else ''
+            location_data = {
+                'cd': district,
+                'state': normalize_state(state_abbrev),
+                'city': city_name,
+                'county': county_name 
+            }
+            if verbose:
+                print("  ✅ Location data found:")
+                if location_data['cd']:
+                    print(f"    • Congressional District: {location_data['cd']}")
+                if location_data['state']:
+                    print(f"    • State: {location_data['state']}")
+                if location_data['city']:
+                    print(f"    • City: {location_data['city']}")
+                if location_data['county']:
+                    print(f"    • County: {location_data['county']}")
+            return location_data
+            
+    except Exception as e:
+        if verbose:
+            print(f"  ❌ Error looking up location data: {e}")
+            print(f"  📝 Full error details: {str(e)}")
+        
+    return {'cd': '', 'state': '', 'city': '', 'county': ''}
+
+
+def format_for_main_csv(project, args):
     """Format a project record for the main CSV format."""
     formatted = project.get('original_row', {}).copy()
     
@@ -852,6 +967,36 @@ def format_for_main_csv(project):
     
     link = clean_link(project.get('link', ''))
     
+    congressional_district = project.get('congressional_district', '')
+    state = project.get('state', '')
+    city = project.get('city', '')
+    county = project.get('county', '')
+    
+    if project.get('source_file') and lat and lon:
+        missing_fields = []
+        if not congressional_district:
+            missing_fields.append('congressional district')
+        if not state:
+            missing_fields.append('state')
+        if not city:
+            missing_fields.append('city')
+        if not county:
+            missing_fields.append('county')
+            
+        if missing_fields:
+            if args.verbose:
+                print(f"\n📍 Processing location data for project: {project.get('project_name')}")
+                print(f"  Missing fields: {', '.join(missing_fields)}")
+            location_data = lookup_congressional_district(lat, lon, verbose=args.verbose)
+            if not congressional_district:
+                congressional_district = location_data['cd']
+            if not state:
+                state = location_data['state']
+            if not city:
+                city = location_data['city']
+            if not county:
+                county = location_data['county']
+    
     updates = {
         'Unique ID': unique_id,
         'Data Source': data_source,
@@ -863,11 +1008,11 @@ def format_for_main_csv(project):
         'Project Location Type': project.get('project_location_type', 'Latitude and Longitude'),
         'Latitude': lat,
         'Longitude': lon,
-        'City': project.get('city', ''),
-        'County': project.get('county', ''),
+        'City': city,
+        'County': county,
         'Tribe': project.get('tribe', ''),
-        'State': project.get('state', ''),
-        '118th CD': project.get('congressional_district', ''),
+        'State': state,
+        '118th CD': congressional_district,
         'Funding Amount': project.get('funding_amount', ''),
         'Link': link,
         'Agency Name': project.get('agency', ''),
@@ -987,18 +1132,82 @@ def write_output_files(main_projects, new_projects, review_projects, file_paths,
         else:
             all_projects.append(dict(project))
     
-    valid_new_projects = []
+    print("\nLooking up missing location data from Census Bureau API...")
+    
+    projects_needing_lookup = []
     for project in new_projects:
-        formatted_project = format_for_main_csv(project)
-        if formatted_project is not None:  # Only add projects with valid lat/lon
-            # Only keep fields that are in the main schema
-            filtered_project = {k: formatted_project.get(k, '') for k in main_fieldnames}
-            all_projects.append(filtered_project)
-            valid_new_projects.append(project)
+        try:
+            lat = float(project.get('latitude', 0))
+            lon = float(project.get('longitude', 0))
+            if abs(lat) < 0.000001 or abs(lon) < 0.000001:
+                continue
+            if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+                continue
+                
+            if project.get('source_file'):  
+                missing_fields = []
+                if not project.get('congressional_district'):
+                    missing_fields.append('congressional district')
+                if not project.get('state'):
+                    missing_fields.append('state')
+                if not project.get('city'):
+                    missing_fields.append('city')
+                if not project.get('county'):
+                    missing_fields.append('county')
+                    
+                if missing_fields:
+                    projects_needing_lookup.append((project, lat, lon, missing_fields))
+        except (ValueError, TypeError):
+            continue
+    
+    valid_new_projects = []
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_project = {}
+        
+        for project, lat, lon, missing_fields in projects_needing_lookup:
+            future = executor.submit(lookup_congressional_district, lat, lon, args.verbose)
+            future_to_project[future] = (project, missing_fields)
+        
+        with tqdm(total=len(projects_needing_lookup), desc="Processing location lookups", unit="projects") as pbar:
+            for future in as_completed(future_to_project):
+                project, missing_fields = future_to_project[future]
+                try:
+                    location_data = future.result()
+                    
+                    if 'congressional district' in missing_fields:
+                        project['congressional_district'] = location_data['cd']
+                    if 'state' in missing_fields:
+                        project['state'] = location_data['state']
+                    if 'city' in missing_fields:
+                        project['city'] = location_data['city']
+                    if 'county' in missing_fields:
+                        project['county'] = location_data['county']
+                        
+                    formatted_project = format_for_main_csv(project, args)
+                    if formatted_project is not None:
+                        filtered_project = {k: formatted_project.get(k, '') for k in main_fieldnames}
+                        all_projects.append(filtered_project)
+                        valid_new_projects.append(project)
+                except Exception as e:
+                    if args.verbose:
+                        tqdm.write(f"Error processing location data for project {project.get('project_name')}: {e}")
+                pbar.update(1)
+    
+    remaining_projects = [p for p in new_projects if p not in [x[0] for x in projects_needing_lookup]]
+    with tqdm(total=len(remaining_projects), desc="Processing remaining projects", unit="projects") as pbar:
+        for project in remaining_projects:
+            formatted_project = format_for_main_csv(project, args)
+            if formatted_project is not None:
+                filtered_project = {k: formatted_project.get(k, '') for k in main_fieldnames}
+                all_projects.append(filtered_project)
+                valid_new_projects.append(project)
+            pbar.update(1)
     
     skipped_count = len(new_projects) - len(valid_new_projects)
     if skipped_count > 0:
         print(f"Skipped {skipped_count} projects due to invalid lat/lon values")
+    
+    print(f"Writing {len(all_projects)} total projects to output file...")
     
     with open(file_paths['output'], 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=main_fieldnames)

@@ -21,13 +21,15 @@
 	let isHovering = false;
 
 	const cols = [
-		{ key: 'projectName', label: 'Project Name', width: '20%' },
-		{ key: 'agencyName', label: 'Agency', width: '15%' },
-		{ key: 'fundingSource', label: 'Funding Source', width: '8%' },
+		{ key: 'projectName', label: 'Project Name', width: '300px' },
+		{ key: 'agencyName', label: 'Agency', width: '200px' },
+		{ key: 'bureauName', label: 'Bureau', width: '200px' },
+		{ key: 'dataSource', label: 'Data Source', width: '200px' },
+		{ key: 'fundingSource', label: 'Funding Source', width: '150px' },
 		{
 			key: 'fundingAmount',
 			label: 'Announced Funding',
-			width: '10%',
+			width: '150px',
 			format: (value: unknown) => {
 				if (!value) return '';
 				const amount =
@@ -48,7 +50,7 @@
 		{
 			key: 'outlayedAmountFromIIJASupplemental',
 			label: 'Funding Received',
-			width: '10%',
+			width: '150px',
 			format: (value: unknown) => {
 				if (!value) return '';
 				const amount =
@@ -69,7 +71,7 @@
 		{
 			key: 'percentIIJAOutlayed',
 			label: 'Percent Received',
-			width: '7%',
+			width: '120px',
 			format: (value: unknown) => {
 				if (!value) return '';
 				const amount =
@@ -82,14 +84,15 @@
 				return `${amount.toFixed(1)}%`;
 			}
 		},
-		{ key: 'category', label: 'Program Category', width: '10%' },
-		{ key: 'subcategory', label: 'Program Subcategory', width: '10%' },
-		{ key: 'projectLocationType', label: 'Grantee Type', width: '5%' },
-		{ key: 'congressionalDistrict', label: 'Congressional District', width: '5%' },
+		{ key: 'category', label: 'Program Category', width: '200px' },
+		{ key: 'subcategory', label: 'Program Subcategory', width: '200px' },
+		{ key: 'projectLocationType', label: 'Grantee Type', width: '150px' },
+		{ key: 'state', label: 'State', width: '100px' },
+		{ key: 'congressionalDistrict', label: 'Congressional District', width: '150px' },
 		{
 			key: 'link',
 			label: 'Link',
-			width: '5%',
+			width: '100px',
 			format: (value: unknown) => {
 				if (!value || !isValidUrl(value as string)) return '';
 				return `<a href="${value}" target="_blank" class="text-emerald-600 hover:text-emerald-700 hover:underline">View details</a>`;
@@ -229,13 +232,16 @@
 						if (col.format && value && col.key !== 'link') {
 							value = col.format(value).replace(/<[^>]*>/g, ''); // Strip HTML tags
 						}
+						// Clean up any line breaks or extra whitespace
 						if (typeof value === 'string') {
+							value = value.replace(/[\r\n]+/g, ' ').trim();
 							value = value.includes(',') ? `"${value.replace(/"/g, '""')}"` : value;
 						}
 						return value || '';
 					})
 					.join(',');
 			})
+			.filter(row => row.trim() !== '') // Remove any empty rows
 			.join('\n');
 
 		const csv = `${headers}\n${rows}`;
@@ -285,7 +291,7 @@
 				role="region"
 				aria-label="Scrollable results table"
 			>
-				<table class="min-w-full table-auto border-collapse">
+				<table class="min-w-full table-auto border-collapse table-fixed">
 					<thead class="sticky top-0 z-10">
 						<tr>
 							{#each cols as { key, label, width }}
@@ -293,7 +299,7 @@
 									class="group relative border-b border-slate-200 bg-slate-100/95 p-2 text-left font-['PolySans'] text-xs font-medium shadow-sm backdrop-blur-sm transition-colors first:rounded-tl-lg last:rounded-tr-lg hover:cursor-pointer hover:bg-slate-200/95"
 									class:sort-desc={sort.col === key && sort.desc}
 									class:sort-asc={sort.col === key && !sort.desc}
-									style="width: {width}"
+									style="width: {width}; min-width: {width};"
 									on:click={resort(key)}
 								>
 									<span class="flex items-center gap-1 text-slate-700">
@@ -326,8 +332,8 @@
 							>
 								{#each cols as { key, format, width }}
 									<td 
-										class="whitespace-normal border-b border-slate-200 p-2 text-xs text-slate-600"
-										style="width: {width}"
+										class="whitespace-normal border-b border-slate-200 p-2 text-xs text-slate-600 overflow-hidden text-ellipsis"
+										style="width: {width}; min-width: {width};"
 									>
 										{#if key === 'link' && row[key]}
 											{@html format

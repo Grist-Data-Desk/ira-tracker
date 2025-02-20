@@ -2,6 +2,8 @@
 
 Grist's interactive web application for visualizing Inflation Reduction Act (IRA) and bipartisan infrastructure law (BIL) projects across the United States. Built with SvelteKit and MapLibre GL. [View the live map here.](https://grist.org/accountability/climate-infrastructure-ira-bil-map-tool/)
 
+For details about our data collection and processing methodology, see our [methodology documentation](METHODOLOGY.md).
+
 ## Features
 
 - 🗺️ Interactive map visualization of IRA/BIL projects
@@ -99,6 +101,28 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
     - `/processed` - Generated files (PMTiles, compressed GeoJSON)
   - `/styles` - Map style configuration
 - `/static` - Static assets (favicon, etc.)
+
+## Embedding the Map
+
+The map can be embedded in other websites using an `iframe`. Here's an example:
+
+```html
+<iframe 
+  src="https://grist.org/project/updates/interactive-ira-bil-project-map/" 
+  style="margin-left: calc(50% - 50vw); width: 100vw; height: calc(100vh - 66px); border: 0; margin-bottom: 10px;"
+></iframe>
+```
+
+You can also embed state-specific views by adding URL parameters. For example, to embed a view focused on Michigan:
+
+```html
+<iframe 
+  src="https://grist.org/project/updates/interactive-ira-bil-project-map/?state=MI" 
+  style="margin-left: calc(50% - 50vw); width: 100vw; height: calc(100vh - 66px); border: 0; margin-bottom: 10px;"
+></iframe>
+```
+
+Such a view will not filter the database and is only for localization purposes for a given embed.
 
 ## Credits
 
