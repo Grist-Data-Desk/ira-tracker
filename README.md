@@ -2,7 +2,7 @@
 
 Grist's interactive web application for visualizing Inflation Reduction Act (IRA) and bipartisan infrastructure law (BIL) projects across the United States. Built with SvelteKit and MapLibre GL. [View the live map here.](https://grist.org/accountability/climate-infrastructure-ira-bil-map-tool/)
 
-For details about our data collection and processing methodology, see our [methodology documentation](METHODOLOGY.md).
+For details about our data collection and processing methodology, see our [methods doc](METHODOLOGY.md).
 
 ## Features
 
