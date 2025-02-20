@@ -100,6 +100,14 @@ Grist's interactive web application for visualizing Inflation Reduction Act (IRA
   - `/styles` - Map style configuration
 - `/static` - Static assets (favicon, etc.)
 
+## Methods
+
+The `project-similarity.py` script is designed to merge additional project CSVs into the main Biden White House IRA/BIL project database, handling differing schemas and deduplicating entries.
+
+The script normalizes state names and extracts key identifiers from different CSV formats (i.e. those from BIA, DOE, DOI, EPA, NOAA, and USBR). It calculates the Haversine distance between geographic points and normalizes text for comparison. The similarity score between projects is calculated based on geographic location, state, funding source, project name, description, funding amount, and agency. The score is determined by comparing these attributes and assigning points based on their similarity, with geographic location and project name being the most heavily weighted factors.
+
+To optimize the process, the script creates spatial and state indices for fast lookups and precomputes [TF-IDF features](https://www.geeksforgeeks.org/understanding-tf-idf-term-frequency-inverse-document-frequency/) for project names and descriptions. It then processes input files in chunks, identifying new projects and those requiring manual review. Similar projects are found using spatial and text indexing, and detailed similarity calculations are performed for candidates. The script formats new projects for inclusion in the main CSV and writes the updated main project list and review list to output files.
+
 ## Credits
 
 Development by [Clayton Aldern](https://github.com/clayton-aldern) for [Grist](https://grist.org). Project structure and additional development by [Parker Ziegler](https://github.com/parkerziegler). Results table component adapted from [cartokit](https://github.com/parkerziegler/cartokit).

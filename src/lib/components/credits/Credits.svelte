@@ -14,7 +14,7 @@
 				or county/city centroids, which may result in overlapping points on the map. Others may be jittered in source data.
 			</p>
 			<p class="mb-0.5">
-				<strong>Sources</strong> Biden White House / EPA / DOI / DOE / BIA / NOAA / USBR / Grist analysis
+				<strong>Sources</strong> Biden White House / USAspending / EPA / DOI / DOE / BIA / NOAA / USBR / Grist analysis
 			</p>
 			<p class="mb-0">
 				<strong>Development</strong> Clayton Aldern / Parker Ziegler / Grist. See our <a href="https://github.com/Grist-Data-Desk/ira-tracker" target="_blank">methods</a>.
