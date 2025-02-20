@@ -1,18 +1,18 @@
-# 🔄 Data Processing Methodology
+# Data Processing Methodology
 
 This document outlines the methodology used for processing and deduplicating project data from various federal sources into a unified database of IRA (Inflation Reduction Act) and BIL (Bipartisan Infrastructure Law) projects.
 
-## 📋 Overview
+## Overview
 
 The data processing pipeline consists of these steps:
-1. Project deduplication and merging (`project-similarity.py`) 🔍
-2. USAspending data integration (`transform-and-merge.py`) 💰
-3. Map data generation (`csv-to-geojson.ts` and `geojson-to-pmtiles.ts`) 🗺️
+1. Project deduplication and merging (`project-similarity.py`)
+2. USAspending data integration (`transform-and-merge.py`)
+3. Map data generation (`csv-to-geojson.ts` and `geojson-to-pmtiles.ts`)
 
-## 1. 🔍 Project Deduplication and Merging
+## 1. Project Deduplication and Merging
 
-### 📊 Data Sources
-Beginning with the Biden White House IRA/BIL project database, the script processes project data from multiple federal agencies including:
+### Data Sources
+Beginning with the Biden White House IRA/BIL project database, the script processes project data from multiple federal agencies and bureaus, including:
 - Bureau of Indian Affairs (BIA)
 - Department of Energy (DOE)
 - Department of Interior (DOI)
@@ -20,7 +20,7 @@ Beginning with the Biden White House IRA/BIL project database, the script proces
 - National Oceanic and Atmospheric Administration (NOAA)
 - US Bureau of Reclamation (USBR)
 
-### 🔄 Deduplication Process
+### Deduplication Process
 
 #### A. Feature Extraction
 For each project, the following key identifiers are extracted and normalized:
@@ -34,32 +34,32 @@ For each project, the following key identifiers are extracted and normalized:
 #### B. Similarity Scoring
 Projects are compared using a weighted scoring system (0-100) that considers:
 
-1. Geographic Location (40 points max) 📍
+1. Geographic Location (40 points max)
    - <1km distance: 40 points
    - <10km distance: 30 points
    - <50km distance: 15 points
    - <100km distance: 5 points
 
-2. State Match (10 points) 🗺️
+2. State Match (10 points)
    - Exact state match: 10 points
 
-3. Funding Source (5 points) 💰
+3. Funding Source (5 points)
    - Matching funding source (IRA/BIL): 5 points
 
-4. Project Name Similarity (30 points max) 📑
-   - >80% similarity: 30 points
-   - >50% similarity: 20 points
-   - >30% similarity: 10 points
+4. Project Name Similarity (30 points max)
+   - \>80% similarity: 30 points
+   - \>50% similarity: 20 points
+   - \>30% similarity: 10 points
 
-5. Project Description Similarity (15 points max) 📄
-   - >70% similarity: 15 points
-   - >40% similarity: 10 points
-   - >20% similarity: 5 points
+5. Project Description Similarity (15 points max)
+   - \>70% similarity: 15 points
+   - \>40% similarity: 10 points
+   - \>20% similarity: 5 points
 
-6. Funding Amount Similarity (5 points) 💵
+6. Funding Amount Similarity (5 points)
    - Within 10% of each other: 5 points
 
-7. Agency/Bureau Match (5 points) 🏛️
+7. Agency/Bureau Match (5 points)
    - Exact agency match: 5 points
 
 #### C. Optimization Techniques
@@ -71,11 +71,11 @@ The script employs several optimization strategies:
 
 #### D. Decision Making
 Projects are categorized based on similarity scores:
-- High confidence matches (≥80 points): Considered duplicates ✅
-- Medium confidence matches (40-79 points): Flagged for manual review 🤔
-- Low confidence matches (<40 points): Treated as new unique projects 🆕
+- High confidence matches (≥80 points): Considered duplicates
+- Medium confidence matches (40-79 points): Flagged for manual review
+- Low confidence matches (<40 points): Treated as new unique projects
 
-## 2. 💰 USAspending Data Integration
+## 2. USAspending Data Integration
 
 ### Process Overview
 The second script integrates USAspending assistance and contract data with the deduplicated project database.
@@ -101,21 +101,23 @@ Calculates IIJA (Infrastructure Investment and Jobs Act) outlay percentages:
   - Missing outlay amount: 0%
   - Zero outlay amount: 0%
 
-## 3. 🗺️ Map Data Generation
+## 3. Map Data Generation
 
-The final step transforms the processed data into web-optimized map formats:
+The final step transforms the processed data into web-optimized map formats using two scripts:
 
-### GeoJSON Generation (`scripts/src/csv-to-geojson.ts`)
+### GeoJSON Generation
+The `csv-to-geojson.ts` script:
 - Converts processed CSV data into GeoJSON format
 - Validates and formats geographic coordinates
 - Structures properties for web display
 
-### PMTiles Generation (`scripts/src/geojson-to-pmtiles.ts`)
+### PMTiles Generation
+The `geojson-to-pmtiles.ts` script:
 - Converts GeoJSON into PMTiles format
 - Optimizes for efficient web loading
 - Generates zoom-level specific tiles
 
-## 📁 Output Files
+## Output Files
 
 The pipeline produces these outputs:
 1. Updated main project database with deduplicated records
@@ -125,7 +127,7 @@ The pipeline produces these outputs:
    - GeoJSON files for raw geographic data
    - PMTiles for optimized web delivery
 
-## 📝 Notes
+## Notes
 
 - The deduplication process is conservative, preferring to flag uncertain matches for review rather than making incorrect assumptions
 - Geographic coordinates are validated to ensure they fall within valid ranges
