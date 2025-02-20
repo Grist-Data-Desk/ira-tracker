@@ -1,11 +1,21 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
+import os
+
+def get_project_root():
+    """Get the absolute path to the project root directory."""
+    script_dir = Path(os.path.abspath(__file__)).parent  # scripts/src
+    return script_dir.parent.parent  # project root
 
 def load_and_prepare_data():
     print('Loading files...')
-    projects_df = pd.read_csv('../data/raw/wh-public-projects.csv', low_memory=False)
-    assistance_df = pd.read_csv('../data/raw/usaspending-assistance.csv', low_memory=False)
-    contracts_df = pd.read_csv('../data/raw/usaspending-contracts.csv', low_memory=False)
+    root_dir = get_project_root()
+    raw_dir = root_dir / 'scripts' / 'data' / 'raw'
+    
+    projects_df = pd.read_csv(raw_dir / 'wh-public-projects-updated.csv', low_memory=False)
+    assistance_df = pd.read_csv(raw_dir / 'usaspending-assistance.csv', low_memory=False)
+    contracts_df = pd.read_csv(raw_dir / 'usaspending-contracts.csv', low_memory=False)
     
     assistance_df = assistance_df.rename(columns={
         'assistance_award_unique_key': 'Unique ID',
@@ -74,7 +84,10 @@ def main():
     merged_df = merge_data(projects_df, assistance_df, contracts_df)
     final_df = calculate_percentages(merged_df)
     final_df = final_df.rename(columns={'Unique ID': 'UID'})
-    final_df.to_csv('../data/raw/projects.csv', index=False)
+    
+    # Save to raw directory
+    raw_dir = get_project_root() / 'scripts' / 'data' / 'raw'
+    final_df.to_csv(raw_dir / 'projects.csv', index=False)
     print('Done.')
 
 if __name__ == "__main__":
