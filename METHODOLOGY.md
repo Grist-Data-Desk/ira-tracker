@@ -1,10 +1,10 @@
 # Data Processing Methodology
 
-This document outlines the methodology used for processing and deduplicating project data from various federal sources into a unified database of IRA (Inflation Reduction Act) and BIL (Bipartisan Infrastructure Law) projects.
+This document outlines the methodology used for processing and deduplicating project data from various federal sources into a unified database of Inflation Reduction Act (IRA) and bipartisan infrastructure law (BIL) projects.
 
 ## Overview
 
-The data processing pipeline consists of these steps:
+The data processing pipeline consists of three main steps:
 1. Project deduplication and merging (`project-similarity.py`)
 2. USAspending data integration (`add-usaspending.py`)
 3. Map data generation (`csv-to-geojson.ts` and `geojson-to-pmtiles.ts`)
@@ -17,22 +17,16 @@ Beginning with the Biden White House IRA/BIL project database, the script proces
 - Department of Energy (DOE)
 - Department of Interior (DOI)
 - Environmental Protection Agency (EPA)
-- National Oceanic and Atmospheric Administration (NOAA)
+- National Oceanic and Atmospheric Administration (NOAA), and
 - US Bureau of Reclamation (USBR)
 
 ### Deduplication Process
 
 #### A. Feature Extraction
-For each project, the following key identifiers are extracted and normalized:
-- Project name and description
-- Geographic coordinates (latitude/longitude)
-- State location
-- Funding amount and source
-- Agency and bureau information
-- Program details
+For each project, we extract and normalize several key identifiers. These include the project name and description, geographic coordinates (latitude/longitude), state location, funding amount and source, agency and bureau information, and program details.
 
 #### B. Similarity Scoring
-Projects are compared using a weighted scoring system (0-100) that considers:
+Projects are compared using a weighted scoring system that evaluates similarity on a scale of 0-100 points. The scoring system considers multiple factors:
 
 1. Geographic Location (40 points max)
    - <1km distance: 40 points
@@ -63,77 +57,35 @@ Projects are compared using a weighted scoring system (0-100) that considers:
    - Exact agency match: 5 points
 
 #### C. Optimization Techniques
-The script employs several optimization strategies:
-- [R-tree spatial indexing](https://www.geeksforgeeks.org/introduction-to-r-tree/) for efficient geographic queries
-- State-based indexing for quick location filtering
-- [TF-IDF](https://www.geeksforgeeks.org/understanding-tf-idf-term-frequency-inverse-document-frequency/) vectorization for text similarity comparisons
-- Parallel processing for large datasets
-- Concurrent API calls for location data lookups
+The script implements several optimization strategies to handle the computational load efficiently. We use [R-tree spatial indexing](https://www.geeksforgeeks.org/introduction-to-r-tree/) for geographic queries and state-based indexing for quick location filtering. Text similarity comparisons are handled through [TF-IDF vectorization](https://www.geeksforgeeks.org/
+understanding-tf-idf-term-frequency-inverse-document-frequency/). The system employs parallel processing for large datasets and manages concurrent API calls for location data lookups.
 
 #### D. Location Data Processing
-The script efficiently handles location data enrichment for new projects added to the database:
+Location data enrichment for new projects is handled through an efficient concurrent processing system. The script uses `ThreadPoolExecutor` to make multiple concurrent API calls to the Census Bureau, with a default of 10 concurrent workers to balance speed and API rate limits. API responses are processed as they complete, rather than waiting for all to finish.
 
-1. Concurrent Processing
-   - Uses `ThreadPoolExecutor` to make multiple concurrent API calls to the Census Bureau
-   - Default of 10 concurrent workers to balance speed and API rate limits
-   - Processes API responses as they complete, rather than waiting for all to finish
-
-2. Selective API Usage
-   - Only performs lookups for new projects being added to the database
-   - Preserves existing location data for projects already in the main file
-   - Checks for missing fields (congressional district, state, city, county) before making API calls
+Our selective API usage strategy ensures efficiency by only performing lookups for new projects being added to the database. The system preserves existing location data for projects already in the main White House file and checks for missing fields (Congressional District, state, city, county) before making API calls.
 
 #### E. Decision Making
-Projects are categorized based on similarity scores:
-- High confidence matches (≥80 points): Considered duplicates
-- Medium confidence matches (40-79 points): Flagged for manual review
-- Low confidence matches (<40 points): Treated as new unique projects
+Our pipeline categorizes projects into three levels based on their similarity scores. Projects with scores of 80 points or higher are considered high confidence matches and treated as duplicates. Those scoring between 40 and 79 points are flagged as medium confidence matches requiring manual review. Projects scoring below 40 points are treated as new unique projects and are added to the database for visualization.
 
 ## 2. USAspending Data Integration
 
 ### Process Overview
-The second script integrates USAspending assistance and contract data with the deduplicated project database.
+The second phase of our pipeline integrates USAspending assistance and contract data with the deduplicated project database. The process begins by loading the main project database and then processes both USAspending assistance awards and contract awards.
 
-#### A. Data Preparation
-- Loads the main project database
-- Processes USAspending assistance awards
-- Processes USAspending contract awards
+The merging strategy matches records based on unique identifiers, using "ASST*" for assistance awards and "CONT*" for contract awards. The process preserves non-USAspending records and maintains the original record order.
 
-#### B. Merging Strategy
-- Matches records based on unique identifiers:
-  - ASST* for assistance awards
-  - CONT* for contract awards
-- Preserves non-USAspending records
-- Maintains original record order
-
-#### C. Financial Calculations
-Calculates IIJA (Infrastructure Investment and Jobs Act) outlay percentages:
-- For records with both obligated and outlayed amounts:
-  - Percent = (Outlayed Amount / Obligated Amount) * 100
-- Special cases:
-  - Missing both amounts: NA
-  - Missing outlay amount: 0%
-  - Zero outlay amount: 0%
+For financial calculations, we compute BIL outlay percentages. For records with both obligated and outlayed amounts from USAspending, the percentage is calculated as `(Outlayed Amount / Obligated Amount) * 100`. Special cases are handled appropriately: Records missing both amounts are marked as NA, those missing outlay amounts or showing zero outlay are marked as 0%.
 
 ## 3. Map Data Generation
 
-The final step transforms the processed data into web-optimized map formats using two scripts:
+The final phase transforms the processed data into web-optimized map formats using two distinct processes. First, the `csv-to-geojson.ts` script converts processed CSV data into GeoJSON format, validating and formatting geographic coordinates and structuring properties for web display.
 
-### GeoJSON Generation
-The `csv-to-geojson.ts` script:
-- Converts processed CSV data into GeoJSON format
-- Validates and formats geographic coordinates
-- Structures properties for web display
-
-### PMTiles Generation
-The `geojson-to-pmtiles.ts` script:
-- Converts GeoJSON into PMTiles format
-- Optimizes for efficient web loading
-- Generates zoom-level specific tiles
+Following this step, the `geojson-to-pmtiles.ts` script converts the GeoJSON into PMTiles format, optimizing it for efficient web loading and generating zoom-level specific tiles.
 
 ## Output Files
 
-The pipeline produces these outputs:
+The pipeline produces these primary outputs:
 1. Updated main project database with deduplicated records
 2. Review file containing potential matches requiring manual verification
 3. Final merged dataset with USAspending financial data
@@ -144,7 +96,4 @@ The pipeline produces these outputs:
 ## Notes
 
 - The deduplication process is conservative, preferring to flag uncertain matches for review rather than making incorrect assumptions
-- Geographic coordinates are validated to ensure they fall within valid ranges
 - Text comparisons use normalized forms (removing common words, standardizing case, etc.)
-- The process maintains audit trails by preserving original source information
-- Location data lookups are optimized through concurrent processing and selective API usage 
