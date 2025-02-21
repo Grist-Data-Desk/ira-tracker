@@ -57,8 +57,7 @@ Projects are compared using a weighted scoring system that evaluates similarity 
    - Exact agency match: 5 points
 
 #### C. Optimization Techniques
-The script implements several optimization strategies to handle the computational load efficiently. We use [R-tree spatial indexing](https://www.geeksforgeeks.org/introduction-to-r-tree/) for geographic queries and state-based indexing for quick location filtering. Text similarity comparisons are handled through [TF-IDF vectorization](https://www.geeksforgeeks.org/
-understanding-tf-idf-term-frequency-inverse-document-frequency/). The system employs parallel processing for large datasets and manages concurrent API calls for location data lookups.
+The script implements several optimization strategies to handle the computational load efficiently. We use [R-tree spatial indexing](https://www.geeksforgeeks.org/introduction-to-r-tree/) for geographic queries and state-based indexing for quick location filtering. Text similarity comparisons are handled through [TF-IDF vectorization](https://www.geeksforgeeks.org/understanding-tf-idf-term-frequency-inverse-document-frequency/). The system employs parallel processing for large datasets and manages concurrent API calls for location data lookups.
 
 #### D. Location Data Processing
 Location data enrichment for new projects is handled through an efficient concurrent processing system. The script uses `ThreadPoolExecutor` to make multiple concurrent API calls to the Census Bureau, with a default of 10 concurrent workers to balance speed and API rate limits. API responses are processed as they complete, rather than waiting for all to finish.
