@@ -85,14 +85,15 @@ Following this step, the `geojson-to-pmtiles.ts` script converts the GeoJSON int
 ## Output Files
 
 The pipeline produces these primary outputs:
-1. Updated main project database with deduplicated records
-2. Review file containing potential matches requiring manual verification
-3. Final merged dataset with USAspending financial data
+1. Updated main project database with deduplicated records (`scripts/data/raw/wh-public-projects-updated.csv`)
+2. Review file containing potential matches requiring manual verification (`scripts/data/raw/projects-to-review.csv`)
+3. Final merged dataset with USAspending financial data (`scripts/data/raw/projects.csv`)
 4. Map visualization files:
-   - GeoJSON files for raw geographic data
-   - PMTiles for optimized web delivery
+   - GeoJSON files for raw geographic data (`scripts/data/processed/projects.geojson`)
+   - PMTiles for optimized web delivery (`scripts/data/processed/projects.pmtiles`)
 
 ## Notes
 
 - The deduplication process is conservative, preferring to flag uncertain matches for review rather than making incorrect assumptions
 - Text comparisons use normalized forms (removing common words, standardizing case, etc.)
+- We currently only map public projects (i.e. we do not include private investments)
