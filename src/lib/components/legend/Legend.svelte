@@ -90,7 +90,7 @@
 <div
 	class={[
 		'floating-panel absolute z-[15] bg-white px-2 pb-2 pt-0.5 shadow-lg md:bottom-auto md:left-auto md:right-[calc(3%+48px)] md:top-4 md:block',
-		$uiState.legendExpanded ? 'bottom-[calc(40px+0.5rem)] left-[calc(3%+2.5rem)]' : 'hidden'
+		$uiState.legendExpanded ? 'bottom-[calc(40px+0.5rem)] left-[calc(3%+5rem)]' : 'hidden'
 	]}
 	style="min-width: {minPanelWidth}px"
 >

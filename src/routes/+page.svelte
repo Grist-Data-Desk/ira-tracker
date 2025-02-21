@@ -528,6 +528,24 @@
 				attributionControl: false
 			});
 
+			// If there's a state parameter, adjust the view with proper padding
+			if (stateConfig) {
+				const bounds = new maplibregl.LngLatBounds(
+					[stateConfig.center[0] - 2, stateConfig.center[1] - 2],
+					[stateConfig.center[0] + 2, stateConfig.center[1] + 2]
+				);
+				
+				map.fitBounds(bounds, {
+					padding: {
+						top: isTabletOrAbove ? 50 : 425,
+						bottom: 50,
+						left: isTabletOrAbove ? 450 : 50,
+						right: 50
+					},
+					maxZoom: stateConfig.zoom
+				});
+			}
+
 			map.scrollZoom.disable();
 			map.scrollZoom.setWheelZoomRate(0);
 			map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');

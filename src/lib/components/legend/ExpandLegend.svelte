@@ -10,7 +10,7 @@
 	class="absolute bottom-[calc(40px+0.5rem)] left-[3%] z-10 rounded border border-earth bg-smog shadow backdrop-blur md:hidden"
 >
 	<button
-		class="flex h-8 w-8 items-center justify-center"
+		class="flex h-8 items-center justify-center gap-1 px-2"
 		on:click={onClick}
 		aria-label="Expand legend"
 	>
@@ -27,5 +27,6 @@
 				fill="currentColor"
 			></path></svg
 		>
+		<span class="font-['Basis_Grotesque'] text-xs">Filters</span>
 	</button>
 </div>
