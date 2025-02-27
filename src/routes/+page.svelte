@@ -26,7 +26,7 @@
 		PMTILES_PATH,
 		GEOJSON_PATH,
 		STYLES_PATH,
-		getCurrentColorExpressions
+		DEFAULT_COLOR_EXPRESSIONS
 	} from '$lib/utils/config';
 	import type { ProjectFeatureCollection, Project } from '$lib/types';
 	import ExpandLegend from '$lib/components/legend/ExpandLegend.svelte';
@@ -51,8 +51,12 @@
 				if (geolocateControl) {
 					geolocateControl._watchState = 'OFF';
 					geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
-					geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
-					geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
+					geolocateControl._geolocateButton.classList.remove(
+						'maplibregl-ctrl-geolocate-background'
+					);
+					geolocateControl._geolocateButton.classList.remove(
+						'maplibregl-ctrl-geolocate-background-error'
+					);
 					geolocateControl._clearWatch();
 				}
 
@@ -69,7 +73,7 @@
 				});
 
 				visualState.set({
-					colorMode: 'fundingSource',
+					mode: 'fundingSource',
 					filters: new Set()
 				});
 
@@ -123,22 +127,18 @@
 	function handleSearchResultClick(e: maplibregl.MapMouseEvent & { features?: any[] }) {
 		if (!e.features?.length || !map) return;
 
-		const featuresByLocation = e.features.reduce(
-			(acc: { [key: string]: any[] }, feature: any) => {
-				if (!feature.geometry || feature.geometry.type !== 'Point') return acc;
-				const coords = (feature.geometry as { type: 'Point'; coordinates: [number, number] })
-					.coordinates;
-				const key = `${coords[0]},${coords[1]}`;
-				if (!acc[key]) acc[key] = [];
-				acc[key].push(feature);
-				return acc;
-			},
-			{}
-		);
+		const featuresByLocation = e.features.reduce((acc: { [key: string]: any[] }, feature: any) => {
+			if (!feature.geometry || feature.geometry.type !== 'Point') return acc;
+			const coords = (feature.geometry as { type: 'Point'; coordinates: [number, number] })
+				.coordinates;
+			const key = `${coords[0]},${coords[1]}`;
+			if (!acc[key]) acc[key] = [];
+			acc[key].push(feature);
+			return acc;
+		}, {});
 
-		const coordinates = (
-			e.features[0].geometry as { type: 'Point'; coordinates: [number, number] }
-		).coordinates;
+		const coordinates = (e.features[0].geometry as { type: 'Point'; coordinates: [number, number] })
+			.coordinates;
 		const key = `${coordinates[0]},${coordinates[1]}`;
 		const locationFeatures = featuresByLocation[key];
 
@@ -165,8 +165,10 @@
 
 	async function loadGeoJSONData() {
 		try {
-			dataStore.update(state => ({ ...state, isLoading: true }));
-			const response = await fetch(`${DO_SPACES_URL}/${GEOJSON_PATH}/projects.geojson.br?v=${Date.now()}`);
+			dataStore.update((state) => ({ ...state, isLoading: true }));
+			const response = await fetch(
+				`${DO_SPACES_URL}/${GEOJSON_PATH}/projects.geojson.br?v=${Date.now()}`
+			);
 			if (!response.ok) throw new Error('Failed to load GeoJSON data');
 
 			const buffer = await response.arrayBuffer();
@@ -179,13 +181,12 @@
 				data = JSON.parse(decompressed) as ProjectFeatureCollection;
 				// Log all available property keys from the first feature
 				if (data.features.length > 0) {
-					console.log('Available property keys:', 
-						Object.keys(data.features[0].properties || {})
-					);
+					console.log('Available property keys:', Object.keys(data.features[0].properties || {}));
 				}
 				// Log a sample of the raw data
-				console.log('Sample GeoJSON feature properties:', 
-					data.features.slice(0, 3).map(f => ({
+				console.log(
+					'Sample GeoJSON feature properties:',
+					data.features.slice(0, 3).map((f) => ({
 						...f.properties,
 						outlayed: f.properties?.['Outlayed Amount From IIJA Supplemental'],
 						obligated: f.properties?.['Obligated Amount From IIJA Supplemental'],
@@ -220,7 +221,7 @@
 
 			index.finish();
 
-			dataStore.update(state => ({
+			dataStore.update((state) => ({
 				...state,
 				isLoading: false,
 				collection: {
@@ -230,28 +231,30 @@
 			}));
 		} catch (error) {
 			console.error('Error loading GeoJSON data:', error);
-			dataStore.update(state => ({ ...state, isLoading: false }));
+			dataStore.update((state) => ({ ...state, isLoading: false }));
 		}
 	}
 
 	function updateMapFilters() {
 		if (!map) return;
 
-		const currentMode = $visualState.colorMode;
+		const currentMode = $visualState.mode;
 		const currentFilters = $visualState.filters;
 
-		const expressions = getCurrentColorExpressions();
-		
-		map.setPaintProperty('projects-points', 'circle-color', expressions[currentMode]);
+		map.setPaintProperty('projects-points', 'circle-color', DEFAULT_COLOR_EXPRESSIONS[currentMode]);
 		if (map.getLayer(searchResultsLayer)) {
-			map.setPaintProperty(searchResultsLayer, 'circle-color', expressions[currentMode]);
+			map.setPaintProperty(
+				searchResultsLayer,
+				'circle-color',
+				DEFAULT_COLOR_EXPRESSIONS[currentMode]
+			);
 		}
 
 		const filters: any[] = [];
 		if (currentFilters.size > 0) {
 			let filterField;
 			let mainCategories: string[];
-			
+
 			switch (currentMode) {
 				case 'agency':
 					filterField = 'Agency Name';
@@ -268,8 +271,10 @@
 			}
 
 			const hasOther = currentFilters.has('Other');
-			const mainCategoryFilters = Array.from(currentFilters).filter(f => mainCategories.includes(f));
-			
+			const mainCategoryFilters = Array.from(currentFilters).filter((f) =>
+				mainCategories.includes(f)
+			);
+
 			if (hasOther) {
 				if (mainCategoryFilters.length > 0) {
 					filters.push([
@@ -285,9 +290,8 @@
 			}
 		}
 
-		const finalFilter = filters.length > 0 
-			? (filters.length > 1 ? ['all', ...filters] : filters[0]) 
-			: null;
+		const finalFilter =
+			filters.length > 0 ? (filters.length > 1 ? ['all', ...filters] : filters[0]) : null;
 
 		if (map.getLayoutProperty('projects-points', 'visibility') === 'visible') {
 			map.setFilter('projects-points', finalFilter);
@@ -303,14 +307,16 @@
 	}
 
 	async function searchProjects() {
-		searchState.update(state => ({ ...state, isSearching: true }));
-		uiState.update(state => ({ ...state, creditsExpanded: false }));
+		searchState.update((state) => ({ ...state, isSearching: true }));
+		uiState.update((state) => ({ ...state, creditsExpanded: false }));
 
 		if (geolocateControl) {
 			geolocateControl._watchState = 'OFF';
 			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
 			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
-			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
+			geolocateControl._geolocateButton.classList.remove(
+				'maplibregl-ctrl-geolocate-background-error'
+			);
 			geolocateControl._clearWatch();
 		}
 
@@ -320,9 +326,7 @@
 
 			const latLonRe = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
 			if (latLonRe.test($searchState.query)) {
-				[lat, lon] = $searchState.query
-					.split(',')
-					.map((coord: string) => parseFloat(coord.trim()));
+				[lat, lon] = $searchState.query.split(',').map((coord: string) => parseFloat(coord.trim()));
 
 				if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
 					throw new Error('Invalid coordinates');
@@ -349,7 +353,10 @@
 			cleanupSearchLayers();
 
 			const searchCenter = turf.point([lon, lat]);
-			const searchArea = turf.circle(searchCenter, $searchState.radius, { steps: 64, units: 'miles' });
+			const searchArea = turf.circle(searchCenter, $searchState.radius, {
+				steps: 64,
+				units: 'miles'
+			});
 
 			map?.addSource('search-radius', {
 				type: 'geojson',
@@ -406,7 +413,7 @@
 
 				const projects: Project[] = nearbyFeatures.map(featureToProject);
 
-				searchState.update(state => ({ ...state, results: projects }));
+				searchState.update((state) => ({ ...state, results: projects }));
 
 				if (map?.getLayer(LAYER_CONFIG.projectsPoints.id)) {
 					map.setLayoutProperty(LAYER_CONFIG.projectsPoints.id, 'visibility', 'none');
@@ -423,8 +430,7 @@
 						data: searchResultsGeoJSON
 					});
 
-					const currentMode = $visualState.colorMode;
-					const expressions = getCurrentColorExpressions();
+					const currentMode = $visualState.mode;
 
 					map.addLayer({
 						id: searchResultsLayer,
@@ -432,7 +438,7 @@
 						source: searchResultsLayer,
 						paint: {
 							'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 3, 8, 5],
-							'circle-color': expressions[currentMode],
+							'circle-color': DEFAULT_COLOR_EXPRESSIONS[currentMode],
 							'circle-stroke-width': 2,
 							'circle-stroke-color': '#ffffff',
 							'circle-opacity': 0.7
@@ -462,9 +468,9 @@
 			}
 		} catch (error) {
 			console.error('Search error:', error);
-			searchState.update(state => ({ ...state, results: [] }));
+			searchState.update((state) => ({ ...state, results: [] }));
 		} finally {
-			searchState.update(state => ({ ...state, isSearching: false }));
+			searchState.update((state) => ({ ...state, isSearching: false }));
 		}
 	}
 
@@ -486,9 +492,15 @@
 			state: props.State || '',
 			congressionalDistrict: props['118th CD'] || '',
 			fundingAmount: props['Funding Amount'] ? String(props['Funding Amount']) : '',
-			outlayedAmountFromIIJASupplemental: props['Outlayed Amount From IIJA Supplemental'] ? String(props['Outlayed Amount From IIJA Supplemental']) : '',
-			obligatedAmountFromIIJASupplemental: props['Obligated Amount From IIJA Supplemental'] ? String(props['Obligated Amount From IIJA Supplemental']) : '',
-			percentIIJAOutlayed: props['Percent IIJA Outlayed'] ? String(props['Percent IIJA Outlayed']) : '',
+			outlayedAmountFromIIJASupplemental: props['Outlayed Amount From IIJA Supplemental']
+				? String(props['Outlayed Amount From IIJA Supplemental'])
+				: '',
+			obligatedAmountFromIIJASupplemental: props['Obligated Amount From IIJA Supplemental']
+				? String(props['Obligated Amount From IIJA Supplemental'])
+				: '',
+			percentIIJAOutlayed: props['Percent IIJA Outlayed']
+				? String(props['Percent IIJA Outlayed'])
+				: '',
 			link: props.Link || '',
 			agencyName: props['Agency Name'] || '',
 			bureauName: props['Bureau Name'] || '',
@@ -502,7 +514,7 @@
 
 	onMount(async () => {
 		browser = true;
-		
+
 		const urlParams = new URLSearchParams(window.location.search);
 		const stateParam = urlParams.get('state')?.toLowerCase();
 		const stateConfig = stateParam ? STATE_BOUNDS[stateParam] : undefined;
@@ -534,7 +546,7 @@
 					[stateConfig.center[0] - 2, stateConfig.center[1] - 2],
 					[stateConfig.center[0] + 2, stateConfig.center[1] + 2]
 				);
-				
+
 				map.fitBounds(bounds, {
 					padding: {
 						top: isTabletOrAbove ? 50 : 425,
@@ -555,11 +567,11 @@
 				},
 				trackUserLocation: false
 			});
-			
+
 			geolocateControl.on('geolocate', (position) => {
 				const lat = position.coords.latitude;
 				const lon = position.coords.longitude;
-				searchState.update(state => ({
+				searchState.update((state) => ({
 					...state,
 					query: `${lat.toFixed(4)}, ${lon.toFixed(4)}`
 				}));
@@ -572,7 +584,7 @@
 					geolocateControl._clearWatch();
 				}
 			});
-			
+
 			map.addControl(geolocateControl, 'top-right');
 			map.addControl(new ResetViewControl(), 'top-right');
 
@@ -694,13 +706,13 @@
 	</div>
 
 	{#if $uiState.resultsExpanded}
-		<div 
+		<div
 			class="absolute inset-0 z-10 bg-black/5 backdrop-blur-[2px] transition-opacity duration-300"
-			on:click={() => uiState.update(state => ({ ...state, resultsExpanded: false }))}
+			on:click={() => uiState.update((state) => ({ ...state, resultsExpanded: false }))}
 			on:keydown={(e) => {
 				if (e.key === 'Enter' || e.key === 'Space') {
 					e.preventDefault();
-					uiState.update(state => ({ ...state, resultsExpanded: false }));
+					uiState.update((state) => ({ ...state, resultsExpanded: false }));
 				}
 			}}
 			role="button"
@@ -719,11 +731,12 @@
 			<button
 				type="button"
 				class="flex w-full cursor-pointer appearance-none items-center gap-2 border-0 bg-transparent p-0 text-left transition-colors hover:text-slate-700"
-				on:click={() => uiState.update(state => ({ ...state, resultsExpanded: !state.resultsExpanded }))}
+				on:click={() =>
+					uiState.update((state) => ({ ...state, resultsExpanded: !state.resultsExpanded }))}
 				on:keydown={(e) => {
 					if (e.key === 'Enter' || e.key === ' ') {
 						e.preventDefault();
-						uiState.update(state => ({ ...state, resultsExpanded: !state.resultsExpanded }));
+						uiState.update((state) => ({ ...state, resultsExpanded: !state.resultsExpanded }));
 					}
 				}}
 				aria-expanded={$uiState.resultsExpanded}
@@ -797,6 +810,9 @@
 
 <div class="logo-container">
 	<a href="https://grist.org" target="_blank" rel="noopener noreferrer">
-		<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMyIgdmlld0JveD0iMCAwIDEwMCAxMDMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik04NS4xMSA2NFY4OC4zQzc5LjMxIDkxLjkgNzIuODEgOTQgNjcuMzEgOTRDMzkuOTEgOTQgMTUuMzEgNjQuMSAxNS4zMSAzM0MxNS4zMSAxOC40IDI0LjkxIDYuOSA0MS42MSA2LjlDNTIuMTEgNi45IDcyLjUxIDEzLjYgODcuNjEgMjkuOEM4OC4wNjg4IDMwLjM4IDg4LjY0MzkgMzAuODU3NiA4OS4yOTg0IDMxLjIwMjFDODkuOTUyOCAzMS41NDY1IDkwLjY3MjEgMzEuNzUwMiA5MS40MSAzMS44QzkzLjQxIDMxLjggOTQuNjEgMzAuNSA5NC42MSAyOC4yVjJIOTAuOTFWM0M5MC45MSA2LjYgODguODEgNy42IDgzLjYxIDZDNzMuMTcyNyAyLjUwNDA4IDYyLjIxNTcgMC44MTMxOTMgNTEuMjEgMUMxOC4zMSAxIDAuMjEwMDIyIDI2LjggMC4yMTAwMjIgNTJDMC4yMTAwMjIgODAuOCAyMi4xMSAxMDMgNTEuMjEgMTAzQzYzLjM1OCAxMDIuOTE0IDc1LjE4ODMgOTkuMTEgODUuMTEgOTIuMVYxMDJIOTkuNjFWNTBINDYuNjFWNjRIODUuMTFaIiBmaWxsPSIjM0MzODMwIi8+Cjwvc3ZnPg==" alt="Grist G logo" />
+		<img
+			src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMyIgdmlld0JveD0iMCAwIDEwMCAxMDMiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik04NS4xMSA2NFY4OC4zQzc5LjMxIDkxLjkgNzIuODEgOTQgNjcuMzEgOTRDMzkuOTEgOTQgMTUuMzEgNjQuMSAxNS4zMSAzM0MxNS4zMSAxOC40IDI0LjkxIDYuOSA0MS42MSA2LjlDNTIuMTEgNi45IDcyLjUxIDEzLjYgODcuNjEgMjkuOEM4OC4wNjg4IDMwLjM4IDg4LjY0MzkgMzAuODU3NiA4OS4yOTg0IDMxLjIwMjFDODkuOTUyOCAzMS41NDY1IDkwLjY3MjEgMzEuNzUwMiA5MS40MSAzMS44QzkzLjQxIDMxLjggOTQuNjEgMzAuNSA5NC42MSAyOC4yVjJIOTAuOTFWM0M5MC45MSA2LjYgODguODEgNy42IDgzLjYxIDZDNzMuMTcyNyAyLjUwNDA4IDYyLjIxNTcgMC44MTMxOTMgNTEuMjEgMUMxOC4zMSAxIDAuMjEwMDIyIDI2LjggMC4yMTAwMjIgNTJDMC4yMTAwMjIgODAuOCAyMi4xMSAxMDMgNTEuMjEgMTAzQzYzLjM1OCAxMDIuOTE0IDc1LjE4ODMgOTkuMTEgODUuMTEgOTIuMVYxMDJIOTkuNjFWNTBINDYuNjFWNjRIODUuMTFaIiBmaWxsPSIjM0MzODMwIi8+Cjwvc3ZnPg=="
+			alt="Grist G logo"
+		/>
 	</a>
 </div>

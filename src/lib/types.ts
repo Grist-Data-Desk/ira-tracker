@@ -42,3 +42,8 @@ export interface IndexedFeatureCollection {
 	collection: ProjectFeatureCollection;
 	index: KDBush | null;
 }
+
+/**
+ * Represents the current filter mode for the map.
+ */
+export type Mode = 'agency' | 'category' | 'fundingSource';

@@ -96,7 +96,7 @@
 
 	function onInput(event: Event) {
 		const input = event.target as HTMLInputElement;
-		searchState.update(state => ({ ...state, query: input.value }));
+		searchState.update((state) => ({ ...state, query: input.value }));
 		fetchSuggestions(input.value);
 	}
 
@@ -116,7 +116,7 @@
 	}
 
 	function onSuggestionClick(suggestion: (typeof suggestions)[0]) {
-		searchState.update(state => ({ ...state, query: suggestion.place_name }));
+		searchState.update((state) => ({ ...state, query: suggestion.place_name }));
 		showSuggestions = false;
 		handleSearch();
 	}
@@ -161,8 +161,8 @@
 			Find Climate Spending Near You
 		</h1>
 		<p class="m-0 font-['Basis_Grotesque'] text-sm text-slate-600">
-			Look up federal investments from the <span class="text-orange">Inflation Reduction Act</span> and
-			the <span class="text-cobalt">bipartisan infrastructure law</span> in your area using the control
+			Look up federal investments from the <span class="text-orange">Inflation Reduction Act</span>
+			and the <span class="text-cobalt">bipartisan infrastructure law</span> in your area using the control
 			panel below. You can search by ZIP code, city name, coordinates, or names of known locations.
 		</p>
 	</div>
@@ -221,7 +221,8 @@
 				type="number"
 				id="radius"
 				value={$searchState.radius}
-				on:input={(e) => searchState.update(state => ({ ...state, radius: parseInt(e.currentTarget.value) }))}
+				on:input={(e) =>
+					searchState.update((state) => ({ ...state, radius: parseInt(e.currentTarget.value) }))}
 				class="search-input w-full rounded border border-slate-300 bg-white/50 p-1.5 font-['Basis_Grotesque'] transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
 				min="1"
 				max="500"
@@ -288,15 +289,15 @@
                   margin-top: {$searchState.results.length > 0 ? '0.25rem' : '-10rem'};"
 			>
 				<div class="font-['Basis_Grotesque']">
-					<p class="mt-0 mb-3 text-xs text-slate-600 md:text-sm">
+					<p class="mb-3 mt-0 text-xs text-slate-600 md:text-sm">
 						Total funding across <span class="font-bold text-emerald-600"
 							>{$currentCount} project{$currentCount === 1 ? '' : 's'}</span
 						>
 						in search radius
 						{#if $visualState.filters.size > 0}
-							(filtered by {$visualState.colorMode === 'fundingSource'
+							(filtered by {$visualState.mode === 'fundingSource'
 								? 'funding source'
-								: $visualState.colorMode} to include {(() => {
+								: $visualState.mode} to include {(() => {
 								const items = Array.from($visualState.filters);
 								if (items.length === 1) return items[0];
 								if (items.length === 2) return `${items[0]} and ${items[1]}`;

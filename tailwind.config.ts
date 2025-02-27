@@ -14,6 +14,10 @@ export default {
 				gold: '#FFB800',
 				teal: '#00B4B4',
 				smog: '#F0F0F0'
+			},
+			fontFamily: {
+				basis: ['Basis Grotesque', 'sans-serif'],
+				poly: ['PolySans', 'sans-serif']
 			}
 		}
 	},
