@@ -26,7 +26,7 @@
 		PMTILES_PATH,
 		GEOJSON_PATH,
 		STYLES_PATH,
-		getCurrentColorExpressions
+		DEFAULT_COLOR_EXPRESSIONS
 	} from '$lib/utils/config';
 	import type { ProjectFeatureCollection, Project } from '$lib/types';
 	import ExpandLegend from '$lib/components/legend/ExpandLegend.svelte';
@@ -73,7 +73,7 @@
 				});
 
 				visualState.set({
-					colorMode: 'fundingSource',
+					mode: 'fundingSource',
 					filters: new Set()
 				});
 
@@ -238,14 +238,16 @@
 	function updateMapFilters() {
 		if (!map) return;
 
-		const currentMode = $visualState.colorMode;
+		const currentMode = $visualState.mode;
 		const currentFilters = $visualState.filters;
 
-		const expressions = getCurrentColorExpressions();
-
-		map.setPaintProperty('projects-points', 'circle-color', expressions[currentMode]);
+		map.setPaintProperty('projects-points', 'circle-color', DEFAULT_COLOR_EXPRESSIONS[currentMode]);
 		if (map.getLayer(searchResultsLayer)) {
-			map.setPaintProperty(searchResultsLayer, 'circle-color', expressions[currentMode]);
+			map.setPaintProperty(
+				searchResultsLayer,
+				'circle-color',
+				DEFAULT_COLOR_EXPRESSIONS[currentMode]
+			);
 		}
 
 		const filters: any[] = [];
@@ -428,8 +430,7 @@
 						data: searchResultsGeoJSON
 					});
 
-					const currentMode = $visualState.colorMode;
-					const expressions = getCurrentColorExpressions();
+					const currentMode = $visualState.mode;
 
 					map.addLayer({
 						id: searchResultsLayer,
@@ -437,7 +438,7 @@
 						source: searchResultsLayer,
 						paint: {
 							'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 3, 8, 5],
-							'circle-color': expressions[currentMode],
+							'circle-color': DEFAULT_COLOR_EXPRESSIONS[currentMode],
 							'circle-stroke-width': 2,
 							'circle-stroke-color': '#ffffff',
 							'circle-opacity': 0.7

@@ -1,40 +1,12 @@
-import type { SourceSpecification, AddLayerObject } from 'maplibre-gl';
-import { COLORS } from '$lib/utils/constants';
+import type { SourceSpecification, AddLayerObject, ExpressionSpecification } from 'maplibre-gl';
+import type { Mode } from '$lib/types';
+import { COLORS, CATEGORIES } from '$lib/utils/constants';
+import { createColorMatchExpression } from '$lib/utils/expression';
 
 export const DO_SPACES_URL = 'https://grist.nyc3.cdn.digitaloceanspaces.com';
 export const PMTILES_PATH = 'ira-bil/data/pmtiles';
 export const GEOJSON_PATH = 'ira-bil/data/geojson';
 export const STYLES_PATH = 'ira-bil/styles';
-
-const colorOrder = [
-	COLORS.ORANGE,
-	COLORS.COBALT,
-	COLORS.TURQUOISE,
-	COLORS.TEAL,
-	COLORS.FUCHSIA,
-	COLORS.RED,
-	COLORS.GOLD
-];
-
-const CATEGORIES = {
-	agency: [
-		'Department of Transportation',
-		'Department of Agriculture',
-		'Environmental Protection Agency',
-		'Department of Energy',
-		'Department of Homeland Security',
-		'Department of the Interior'
-	],
-	category: [
-		'Transportation',
-		'Clean Energy, Buildings, and Manufacturing',
-		'Resilience',
-		'Clean Water',
-		'Environmental Remediation',
-		'Broadband'
-	],
-	fundingSource: ['IRA', 'BIL']
-};
 
 export const SOURCE_CONFIG: Record<string, { id: string; config: SourceSpecification }> = {
 	projects: {
@@ -60,22 +32,11 @@ export const SOURCE_CONFIG: Record<string, { id: string; config: SourceSpecifica
 	}
 };
 
-function createColorExpression(field: string, categories: string[]) {
-	return [
-		'match',
-		['get', field],
-		...categories.map((name, i) => [name, colorOrder[i]]).flat(),
-		COLORS.EARTH
-	] as any;
-}
-
-export function getCurrentColorExpressions() {
-	return {
-		agency: createColorExpression('Agency Name', CATEGORIES.agency),
-		category: createColorExpression('Category', CATEGORIES.category),
-		fundingSource: createColorExpression('Funding Source', CATEGORIES.fundingSource)
-	};
-}
+export const DEFAULT_COLOR_EXPRESSIONS: Record<Mode, ExpressionSpecification> = {
+	agency: createColorMatchExpression('Agency Name', CATEGORIES.agency),
+	category: createColorMatchExpression('Category', CATEGORIES.category),
+	fundingSource: createColorMatchExpression('Funding Source', CATEGORIES.fundingSource)
+};
 
 export const LAYER_CONFIG: Record<string, AddLayerObject> = {
 	projectsPoints: {
@@ -90,7 +51,7 @@ export const LAYER_CONFIG: Record<string, AddLayerObject> = {
 		},
 		paint: {
 			'circle-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 22, 12],
-			'circle-color': createColorExpression('Funding Source', CATEGORIES.fundingSource),
+			'circle-color': DEFAULT_COLOR_EXPRESSIONS.fundingSource,
 			'circle-stroke-width': 2,
 			'circle-stroke-color': '#ffffff',
 			'circle-opacity': 0.7
