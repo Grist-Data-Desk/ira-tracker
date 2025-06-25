@@ -311,7 +311,15 @@
 			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-active');
 			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background');
 			geolocateControl._geolocateButton.classList.remove('maplibregl-ctrl-geolocate-background-error');
-			geolocateControl._clearWatch();
+			if (window.navigator.geolocation && typeof window.navigator.geolocation.clearWatch === 'function') {
+				try {
+					geolocateControl._clearWatch();
+				} catch (e) {
+					console.warn('Failed to clear geolocation watch:', e);
+				}
+			} else {
+				console.warn('Geolocation clearWatch not available');
+			}
 		}
 
 		try {
