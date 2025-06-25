@@ -57,24 +57,12 @@
 		if (newFilters.has(label)) {
 			newFilters.delete(label);
 		} else {
-			if (newFilters.size === 0) {
-				newFilters.add(label);
-			} else {
-				if (label === 'Other') {
-					newFilters.add('Other');
-				} else if (CATEGORIES[$visualState.colorMode].includes(label)) {
-					newFilters.delete('Other');
-					newFilters.add(label);
-				} else {
-					newFilters.add(label);
-				}
-			}
+			newFilters.add(label);
 		}
 		
-		const updatedFilters = new Set(newFilters);
 		visualState.update(state => ({
 			...state,
-			filters: updatedFilters
+			filters: newFilters
 		}));
 	}
 
